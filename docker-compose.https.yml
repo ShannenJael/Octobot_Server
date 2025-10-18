@@ -7,7 +7,7 @@ services:
     labels:
       - traefik.enable=true
       - traefik.http.routers.octobot.rule=Host(`${HOST:-octobot.localhost}`)
-      - traefik.http.services.octobot.loadbalancer.server.port=${PORT:-5001}
+  - traefik.http.services.octobot.loadbalancer.server.port=${PORT:-5002}
       - traefik.http.routers.octobot.tls=true
       - traefik.http.routers.octobot.tls.certresolver=letsencrypt
     volumes:
@@ -16,7 +16,7 @@ services:
       - ./tentacles:/octobot/tentacles
       - ./user:/octobot/user
     expose:
-      - ${PORT:-5001}
+  - ${PORT:-5002}
 
   traefik:
     image: traefik:v2

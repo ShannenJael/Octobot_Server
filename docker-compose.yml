@@ -3,13 +3,15 @@ version: "3"
 services:
   octobot:
     image: drakkarsoftware/octobot:stable
+    environment:
+      - PORT=5002
     volumes:
        - ./logs:/octobot/logs
        - ./backtesting:/octobot/backtesting
        - ./tentacles:/octobot/tentacles
        - ./user:/octobot/user
     ports:
-       - ${PORT:-80}:${PORT:-5001}
+      - "5002:5001"
     restart: always
   
   watchtower:

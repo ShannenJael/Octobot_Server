@@ -54,9 +54,10 @@ To install OctoBot, you can either:
 - Install OctoBot [using docker](https://www.octobot.cloud/en/guides/octobot-installation/install-octobot-with-docker-video?utm_source=github&utm_medium=dk&utm_campaign=regular_open_source_content&utm_content=readme_docker_installation).
     Docker install in one line summary:
     ```
-    docker run -itd --name OctoBot -p 80:5001 -v $(pwd)/user:/octobot/user -v $(pwd)/tentacles:/octobot/tentacles -v $(pwd)/logs:/octobot/logs drakkarsoftware/octobot:stable
+  # Map host port 5002 to the container's internal web port (5001).
+  docker run -itd --name OctoBot -p 5002:5001 -v $(pwd)/user:/octobot/user -v $(pwd)/tentacles:/octobot/tentacles -v $(pwd)/logs:/octobot/logs drakkarsoftware/octobot:stable
     ```
-    Your OctoBot will be accessible on [http://localhost](http://localhost).
+    Your OctoBot will be accessible on http://localhost:5002 (the container's webserver listens on port 5001 internally).
 
 ## Exchanges
 [![All OctoBot supported exchanges](../assets/exchange_logo.png)](https://www.octobot.cloud/en/guides/exchanges?utm_source=github&utm_medium=dk&utm_campaign=regular_open_source_content&utm_content=binance)

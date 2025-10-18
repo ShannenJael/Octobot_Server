@@ -63,8 +63,8 @@ VOLUME /octobot/logs
 VOLUME /octobot/tentacles
 VOLUME /octobot/user
 
-EXPOSE 5001
+EXPOSE 5002
 
-HEALTHCHECK --interval=15s --timeout=10s --retries=5 CMD curl -sS http://127.0.0.1:5001 || exit 1
+HEALTHCHECK --interval=15s --timeout=10s --retries=5 CMD curl -sS http://127.0.0.1:5002 || exit 1
 
 ENTRYPOINT ["./docker-entrypoint.sh"]

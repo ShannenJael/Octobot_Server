@@ -27,7 +27,7 @@ job "octobot" {
       }
 
       env {
-        PORT = 5001
+  PORT = 5002
       }
 
       resources {
@@ -39,7 +39,7 @@ job "octobot" {
     network {
       port "http" {
         static = 80
-        to     = 5001
+  to     = 5002
       }
     }
   }
