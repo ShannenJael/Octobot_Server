@@ -1,0 +1,14 @@
+services:
+  octobot:
+    # Build the OctoBot image from the local Dockerfile and code
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        # Optional: forward an optional tag used by the Dockerfile
+        TENTACLES_URL_TAG: ${TENTACLES_URL_TAG-}
+    # Tag the locally built image so Watchtower won't try to update it
+    image: octobot-custom:latest
+
+    # Note: other settings (ports, volumes, env, restart) are inherited
+    # from docker-compose.yml when used with `-f docker-compose.yml -f docker-compose.build.yml`.

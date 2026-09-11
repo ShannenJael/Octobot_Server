@@ -7,16 +7,77 @@ services:
     labels:
       - traefik.enable=true
       - traefik.http.routers.octobot.rule=Host(`${HOST:-octobot.localhost}`)
-  - traefik.http.services.octobot.loadbalancer.server.port=${PORT:-5002}
+      - traefik.http.services.octobot.loadbalancer.server.port=5001
       - traefik.http.routers.octobot.tls=true
       - traefik.http.routers.octobot.tls.certresolver=letsencrypt
+    environment:
+      - PORT=${PORT:-5002}
     volumes:
       - ./logs:/octobot/logs
       - ./backtesting:/octobot/backtesting
       - ./tentacles:/octobot/tentacles
       - ./user:/octobot/user
     expose:
-  - ${PORT:-5002}
+      - "5001"
+    ports:
+      - "5002:5001"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:5001 || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+
+  octobot_b:
+    image: octobot-custom:20251027-pinned
+    restart: always
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.octobot-b.rule=Host(`${HOST_B:-octobot-b.localhost}`)
+      - traefik.http.services.octobot-b.loadbalancer.server.port=5001
+      - traefik.http.routers.octobot-b.tls=true
+      - traefik.http.routers.octobot-b.tls.certresolver=letsencrypt
+    environment:
+      - PORT=${PORT_B:-5003}
+    volumes:
+      - ./logs_b:/octobot/logs
+      - ./backtesting_b:/octobot/backtesting
+      - ./tentacles:/octobot/tentacles
+      - ./user_b:/octobot/user
+    expose:
+      - "5001"
+    ports:
+      - "5002:5001"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:5001 || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+
+  octobot_c:
+    image: octobot-custom:20251027-pinned
+    restart: always
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.octobot-c.rule=Host(`${HOST_C:-octobot-c.localhost}`)
+      - traefik.http.services.octobot-c.loadbalancer.server.port=5001
+      - traefik.http.routers.octobot-c.tls=true
+      - traefik.http.routers.octobot-c.tls.certresolver=letsencrypt
+    environment:
+      - PORT=${PORT_C:-5004}
+    volumes:
+      - ./logs_c:/octobot/logs
+      - ./backtesting_c:/octobot/backtesting
+      - ./tentacles:/octobot/tentacles
+      - ./user_c:/octobot/user
+    expose:
+      - "5001"
+    ports:
+      - "5006:5001"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:5001 || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
 
   traefik:
     image: traefik:v2
