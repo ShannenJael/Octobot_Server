@@ -52,12 +52,30 @@ To install OctoBot, you can either:
 - [Deploy your OctoBot on the cloud using DigitalOcean](https://octobot.cloud/en/guides/octobot-installation/cloud-install-octobot-on-digitalocean?utm_source=github&utm_medium=dk&utm_campaign=regular_open_source_content&utm_content=readme_deploy_on_cloud) and have your OctoBot automating your strategies 24/7.
 - [Download and install](https://www.octobot.cloud/en/guides/octobot-installation/install-octobot-on-your-computer?utm_source=github&utm_medium=dk&utm_campaign=regular_open_source_content&utm_content=readme_local_installation) OctoBot on your computer or server.
 - Install OctoBot [using docker](https://www.octobot.cloud/en/guides/octobot-installation/install-octobot-with-docker-video?utm_source=github&utm_medium=dk&utm_campaign=regular_open_source_content&utm_content=readme_docker_installation).
-    Docker install in one line summary:
-    ```
-  # Map host port 5002 to the container's internal web port (5001).
-  docker run -itd --name OctoBot -p 5002:5001 -v $(pwd)/user:/octobot/user -v $(pwd)/tentacles:/octobot/tentacles -v $(pwd)/logs:/octobot/logs drakkarsoftware/octobot:stable
-    ```
-    Your OctoBot will be accessible on http://localhost:5002 (the container's webserver listens on port 5001 internally).
+
+### Local Docker container
+This repository includes a local Docker setup that wraps the official OctoBot image and keeps runtime data in local folders.
+
+```bash
+docker compose up -d --build
+```
+
+OctoBot starts in standalone web mode and will be available at http://localhost:5002. The container listens on port `5001`; the host port can be changed with `OCTOBOT_HOST_PORT`.
+
+Persistent local folders:
+- `user`
+- `tentacles`
+- `logs`
+- `backtesting`
+
+Useful local commands:
+
+```bash
+docker compose logs -f octobot
+docker compose down
+```
+
+Netlify note: Netlify is a good fit for static front ends and serverless functions, but it does not run long-lived Docker containers. Once the local container works, host the OctoBot container on a Docker-capable host and use Netlify only for a separate front end or public landing page.
 
 ## Exchanges
 [![All OctoBot supported exchanges](../assets/exchange_logo.png)](https://www.octobot.cloud/en/guides/exchanges?utm_source=github&utm_medium=dk&utm_campaign=regular_open_source_content&utm_content=binance)

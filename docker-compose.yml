@@ -1,51 +1,27 @@
-version: "3"
-
 services:
   octobot:
-    image: drakkarsoftware/octobot:stable
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        OCTOBOT_IMAGE: ${OCTOBOT_IMAGE:-drakkarsoftware/octobot:stable}
+    image: octobot-local:latest
+    container_name: octobot-local
     environment:
-      - WEB_PORT=5001
-    volumes:
-       - ./logs:/octobot/logs
-       - ./backtesting:/octobot/backtesting
-       - ./tentacles:/octobot/tentacles
-       - ./user:/octobot/user
-       - ./octobot/config/config_schema.json:/octobot/octobot/config/config_schema.json:ro
-       - ./octobot/config/config_schema.json:/opt/venv/lib/python3.10/site-packages/octobot-2.0.14-py3.10.egg/octobot/config/config_schema.json:ro
+      WEB_PORT: "5001"
+      PORT: "5001"
+      OCTOBOT_STANDALONE: "true"
+    command:
+      - --standalone
+      - --host
+      - 0.0.0.0
+      - --port
+      - "5001"
     ports:
-      - "5002:5001"
-    restart: always
-  
-  octobot_b:
-    image: drakkarsoftware/octobot:stable
-    environment:
-      - WEB_PORT=5003
+      - "${OCTOBOT_HOST_PORT:-5002}:5001"
     volumes:
-       - ./logs_b:/octobot/logs
-       - ./backtesting_b:/octobot/backtesting
-       - ./tentacles:/octobot/tentacles
-       - ./user_b:/octobot/user
-    ports:
-      - "5003:5003"
-    restart: always
-
-  octobot_c:
-    image: drakkarsoftware/octobot:stable
-    environment:
-      - WEB_PORT=5004
-      - PORT=5004
-    volumes:
-       - ./logs_c:/octobot/logs
-       - ./backtesting_c:/octobot/backtesting
-       - ./tentacles:/octobot/tentacles
-       - ./user_c:/octobot/user
-    ports:
-      - "5004:5004"
-    restart: always
-
-  watchtower:
-    image: containrrr/watchtower
-    restart: always
-    command: --cleanup --include-restarting
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
+      - ./user:/octobot/user
+      - ./tentacles:/octobot/tentacles
+      - ./logs:/octobot/logs
+      - ./backtesting:/octobot/backtesting
+    restart: unless-stopped

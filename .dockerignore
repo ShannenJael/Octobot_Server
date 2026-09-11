@@ -1,5 +1,6 @@
 # dev
 .idea
+.claude
 
 # CI files
 .coveragerc
@@ -11,9 +12,15 @@ setup.cfg
 tox.ini
 
 # octobot
+backtesting
 tentacles
 user
 logs
+backtesting_*
+tentacles_*
+user_*
+logs_*
+letsencrypt
 
 # Git
 .git
@@ -106,3 +113,4 @@ docs
 
 # others
 .nojekyll
+OctoBot.zip

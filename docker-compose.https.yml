@@ -1,93 +1,24 @@
-version: "3"
-
 services:
   octobot:
-    image: drakkarsoftware/octobot:stable
-    restart: always
     labels:
       - traefik.enable=true
       - traefik.http.routers.octobot.rule=Host(`${HOST:-octobot.localhost}`)
-      - traefik.http.services.octobot.loadbalancer.server.port=5001
+      - traefik.http.routers.octobot.entrypoints=websecure
       - traefik.http.routers.octobot.tls=true
       - traefik.http.routers.octobot.tls.certresolver=letsencrypt
-    environment:
-      - PORT=${PORT:-5002}
-    volumes:
-      - ./logs:/octobot/logs
-      - ./backtesting:/octobot/backtesting
-      - ./tentacles:/octobot/tentacles
-      - ./user:/octobot/user
+      - traefik.http.services.octobot.loadbalancer.server.port=5001
     expose:
       - "5001"
-    ports:
-      - "5002:5001"
-    healthcheck:
-      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:5001 || exit 1"]
-      interval: 15s
-      timeout: 10s
-      retries: 5
-
-  octobot_b:
-    image: octobot-custom:20251027-pinned
-    restart: always
-    labels:
-      - traefik.enable=true
-      - traefik.http.routers.octobot-b.rule=Host(`${HOST_B:-octobot-b.localhost}`)
-      - traefik.http.services.octobot-b.loadbalancer.server.port=5001
-      - traefik.http.routers.octobot-b.tls=true
-      - traefik.http.routers.octobot-b.tls.certresolver=letsencrypt
-    environment:
-      - PORT=${PORT_B:-5003}
-    volumes:
-      - ./logs_b:/octobot/logs
-      - ./backtesting_b:/octobot/backtesting
-      - ./tentacles:/octobot/tentacles
-      - ./user_b:/octobot/user
-    expose:
-      - "5001"
-    ports:
-      - "5002:5001"
-    healthcheck:
-      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:5001 || exit 1"]
-      interval: 15s
-      timeout: 10s
-      retries: 5
-
-  octobot_c:
-    image: octobot-custom:20251027-pinned
-    restart: always
-    labels:
-      - traefik.enable=true
-      - traefik.http.routers.octobot-c.rule=Host(`${HOST_C:-octobot-c.localhost}`)
-      - traefik.http.services.octobot-c.loadbalancer.server.port=5001
-      - traefik.http.routers.octobot-c.tls=true
-      - traefik.http.routers.octobot-c.tls.certresolver=letsencrypt
-    environment:
-      - PORT=${PORT_C:-5004}
-    volumes:
-      - ./logs_c:/octobot/logs
-      - ./backtesting_c:/octobot/backtesting
-      - ./tentacles:/octobot/tentacles
-      - ./user_c:/octobot/user
-    expose:
-      - "5001"
-    ports:
-      - "5006:5001"
-    healthcheck:
-      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:5001 || exit 1"]
-      interval: 15s
-      timeout: 10s
-      retries: 5
 
   traefik:
     image: traefik:v2
-    restart: always
+    restart: unless-stopped
     command:
       - "--providers.docker=true"
       - "--providers.docker.exposedbydefault=false"
       - "--entrypoints.web.address=:80"
-      - "--entrypoints.web.http.redirections.entryPoint.to=websecure"
-      - "--entrypoints.web.http.redirections.entryPoint.scheme=https"
+      - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
       - "--entrypoints.web.http.redirections.entrypoint.permanent=true"
       - "--entrypoints.websecure.address=:443"
       - "--certificatesresolvers.letsencrypt.acme.email=${LETSENCRYPT_EMAIL:-admin@example.com}"
@@ -99,12 +30,3 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./letsencrypt:/letsencrypt
-    environment:
-      - LETSENCRYPT_EMAIL=${LETSENCRYPT_EMAIL:-admin@example.com}
-
-  watchtower:
-    image: containrrr/watchtower
-    restart: always
-    command: --cleanup --include-restarting
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
