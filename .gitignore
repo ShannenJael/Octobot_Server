@@ -128,6 +128,7 @@ temp_config.json
 # OctoBot logs
 logs
 octobot-local-*.png
+.netlify/
 
 # Debug
 cython_debug/
