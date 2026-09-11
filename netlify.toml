@@ -1,0 +1,13 @@
+[build]
+  publish = "netlify"
+
+[[redirects]]
+  from = "/github"
+  to = "https://github.com/ShannenJael/Octobot_Server"
+  status = 302
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"

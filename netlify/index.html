@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>OctoBot Server</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --ink: #07142f;
+        --muted: #5c6578;
+        --line: #d8e4e8;
+        --aqua: #72d5d5;
+        --green: #5cbf8a;
+        --panel: #f7fafb;
+        --white: #ffffff;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: Arial, Helvetica, sans-serif;
+        color: var(--ink);
+        background: #eef3f5;
+        line-height: 1.5;
+      }
+
+      main {
+        width: min(980px, calc(100% - 32px));
+        margin: 0 auto;
+        padding: 48px 0;
+      }
+
+      section {
+        background: var(--white);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 32px;
+        box-shadow: 0 14px 36px rgba(7, 20, 47, 0.08);
+      }
+
+      h1 {
+        margin: 0 0 12px;
+        font-size: 36px;
+        line-height: 1.1;
+      }
+
+      p {
+        margin: 0 0 18px;
+      }
+
+      .lede {
+        color: var(--muted);
+        font-size: 18px;
+        max-width: 760px;
+      }
+
+      .status {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 12px;
+        margin: 28px 0;
+      }
+
+      .status div {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 16px;
+        background: var(--panel);
+      }
+
+      .label {
+        display: block;
+        color: var(--muted);
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0;
+      }
+
+      .value {
+        display: block;
+        margin-top: 6px;
+        font-weight: 700;
+      }
+
+      pre {
+        overflow-x: auto;
+        margin: 18px 0 0;
+        padding: 16px;
+        border-radius: 8px;
+        background: #07142f;
+        color: #eafafa;
+      }
+
+      code {
+        font-family: Consolas, Monaco, monospace;
+      }
+
+      a {
+        color: #087f86;
+        font-weight: 700;
+      }
+
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-top: 24px;
+      }
+
+      .button {
+        display: inline-flex;
+        align-items: center;
+        min-height: 42px;
+        padding: 10px 16px;
+        border-radius: 6px;
+        background: var(--aqua);
+        color: var(--ink);
+        text-decoration: none;
+      }
+
+      .button.secondary {
+        background: var(--green);
+      }
+
+      @media (max-width: 640px) {
+        main {
+          width: min(100% - 20px, 980px);
+          padding: 24px 0;
+        }
+
+        section {
+          padding: 22px;
+        }
+
+        h1 {
+          font-size: 30px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <section>
+        <h1>OctoBot Server</h1>
+        <p class="lede">This Netlify page is a public project page for the Tabletmasters OctoBot server repository. The OctoBot trading app itself runs as a Docker container.</p>
+
+        <div class="status" aria-label="Project status">
+          <div>
+            <span class="label">Local app URL</span>
+            <span class="value">http://localhost:5002</span>
+          </div>
+          <div>
+            <span class="label">Container</span>
+            <span class="value">octobot-local</span>
+          </div>
+          <div>
+            <span class="label">Internal port</span>
+            <span class="value">5001</span>
+          </div>
+        </div>
+
+        <p>Run the project locally from PowerShell:</p>
+        <pre><code>cd "C:\Users\pascu\Downloads\OctoBot\OctoBot"
+docker compose up -d --build --force-recreate</code></pre>
+
+        <div class="actions">
+          <a class="button" href="https://github.com/ShannenJael/Octobot_Server">View GitHub Repo</a>
+          <a class="button secondary" href="https://docs.netlify.com/deploy/create-deploys/">Netlify Deploy Docs</a>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>
