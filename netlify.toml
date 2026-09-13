@@ -1,6 +1,10 @@
 [build]
   publish = "netlify"
 
+[[edge_functions]]
+  path = "/*"
+  function = "proxy"
+
 [[redirects]]
   from = "/github"
   to = "https://github.com/ShannenJael/Octobot_Server"
@@ -9,5 +13,4 @@
 [[headers]]
   for = "/*"
   [headers.values]
-    X-Frame-Options = "DENY"
     X-Content-Type-Options = "nosniff"

@@ -3,176 +3,255 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>OctoBot Server</title>
+    <title>OctoBot Server — Reverse Proxy Gateway</title>
     <style>
       :root {
-        color-scheme: light;
-        --ink: #07142f;
-        --muted: #5c6578;
-        --line: #d8e4e8;
-        --aqua: #72d5d5;
-        --green: #5cbf8a;
-        --panel: #f7fafb;
-        --white: #ffffff;
+        color-scheme: dark;
+        --bg: #07142f;
+        --surface: #0c2044;
+        --surface-border: #1a3869;
+        --text: #eafafa;
+        --muted: #8ca3c3;
+        --primary: #72d5d5;
+        --accent: #5cbf8a;
+        --warning: #f59e0b;
+        --code-bg: #040c1d;
       }
 
-      * {
-        box-sizing: border-box;
-      }
+      * { box-sizing: border-box; }
 
       body {
         margin: 0;
-        font-family: Arial, Helvetica, sans-serif;
-        color: var(--ink);
-        background: #eef3f5;
-        line-height: 1.5;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        line-height: 1.6;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        padding: 32px 16px;
       }
 
       main {
-        width: min(980px, calc(100% - 32px));
+        width: min(880px, 100%);
         margin: 0 auto;
-        padding: 48px 0;
       }
 
-      section {
-        background: var(--white);
-        border: 1px solid var(--line);
-        border-radius: 8px;
-        padding: 32px;
-        box-shadow: 0 14px 36px rgba(7, 20, 47, 0.08);
+      .card {
+        background: var(--surface);
+        border: 1px solid var(--surface-border);
+        border-radius: 12px;
+        padding: 36px;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+      }
+
+      .header-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        background: rgba(114, 213, 213, 0.15);
+        color: var(--primary);
+        border: 1px solid rgba(114, 213, 213, 0.3);
+        border-radius: 999px;
+        padding: 4px 14px;
+        font-size: 13px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 16px;
+      }
+
+      .header-badge .dot {
+        width: 8px;
+        height: 8px;
+        background: var(--accent);
+        border-radius: 50%;
+        display: inline-block;
       }
 
       h1 {
         margin: 0 0 12px;
-        font-size: 36px;
-        line-height: 1.1;
-      }
-
-      p {
-        margin: 0 0 18px;
-      }
-
-      .lede {
-        color: var(--muted);
-        font-size: 18px;
-        max-width: 760px;
-      }
-
-      .status {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-        gap: 12px;
-        margin: 28px 0;
-      }
-
-      .status div {
-        border: 1px solid var(--line);
-        border-radius: 8px;
-        padding: 16px;
-        background: var(--panel);
-      }
-
-      .label {
-        display: block;
-        color: var(--muted);
-        font-size: 12px;
-        text-transform: uppercase;
-        letter-spacing: 0;
-      }
-
-      .value {
-        display: block;
-        margin-top: 6px;
+        font-size: 32px;
         font-weight: 700;
+        color: #fff;
       }
 
-      pre {
-        overflow-x: auto;
-        margin: 18px 0 0;
-        padding: 16px;
+      .lead {
+        font-size: 17px;
+        color: var(--muted);
+        margin: 0 0 28px;
+        max-width: 720px;
+      }
+
+      .alert-box {
+        background: rgba(245, 158, 11, 0.1);
+        border: 1px solid rgba(245, 158, 11, 0.35);
         border-radius: 8px;
-        background: #07142f;
-        color: #eafafa;
+        padding: 18px 20px;
+        margin-bottom: 28px;
+      }
+
+      .alert-title {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: var(--warning);
+        font-weight: 700;
+        font-size: 15px;
+        margin-bottom: 6px;
+      }
+
+      .steps {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 16px;
+        margin: 24px 0;
+      }
+
+      .step-item {
+        display: flex;
+        gap: 16px;
+        background: var(--code-bg);
+        border: 1px solid var(--surface-border);
+        border-radius: 8px;
+        padding: 18px;
+      }
+
+      .step-number {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        background: var(--primary);
+        color: var(--bg);
+        font-weight: 800;
+        border-radius: 50%;
+        flex-shrink: 0;
+      }
+
+      .step-content h3 {
+        margin: 0 0 4px;
+        font-size: 16px;
+        color: #fff;
+      }
+
+      .step-content p {
+        margin: 0 0 8px;
+        font-size: 14px;
+        color: var(--muted);
       }
 
       code {
-        font-family: Consolas, Monaco, monospace;
+        font-family: Consolas, Monaco, "Courier New", monospace;
+        background: rgba(255, 255, 255, 0.08);
+        color: var(--primary);
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-size: 13px;
       }
 
-      a {
-        color: #087f86;
-        font-weight: 700;
+      pre {
+        background: #020712;
+        border: 1px solid var(--surface-border);
+        border-radius: 6px;
+        padding: 12px;
+        overflow-x: auto;
+        margin: 8px 0 0;
+      }
+
+      pre code {
+        background: none;
+        padding: 0;
       }
 
       .actions {
         display: flex;
         flex-wrap: wrap;
         gap: 12px;
-        margin-top: 24px;
+        margin-top: 28px;
+        border-top: 1px solid var(--surface-border);
+        padding-top: 24px;
       }
 
-      .button {
+      .btn {
         display: inline-flex;
         align-items: center;
-        min-height: 42px;
-        padding: 10px 16px;
+        padding: 10px 20px;
         border-radius: 6px;
-        background: var(--aqua);
-        color: var(--ink);
+        font-weight: 600;
+        font-size: 14px;
         text-decoration: none;
+        transition: opacity 0.2s;
       }
 
-      .button.secondary {
-        background: var(--green);
+      .btn:hover { opacity: 0.9; }
+
+      .btn-primary {
+        background: var(--primary);
+        color: var(--bg);
       }
 
-      @media (max-width: 640px) {
-        main {
-          width: min(100% - 20px, 980px);
-          padding: 24px 0;
-        }
-
-        section {
-          padding: 22px;
-        }
-
-        h1 {
-          font-size: 30px;
-        }
+      .btn-secondary {
+        background: rgba(255, 255, 255, 0.1);
+        color: var(--text);
+        border: 1px solid var(--surface-border);
       }
     </style>
   </head>
   <body>
     <main>
-      <section>
-        <h1>OctoBot Server</h1>
-        <p class="lede">This Netlify page is a public project page for the Tabletmasters OctoBot server repository. The OctoBot trading app itself runs as a Docker container.</p>
+      <div class="card">
+        <div class="header-badge">
+          <span class="dot"></span> Netlify Edge Proxy Active
+        </div>
+        <h1>OctoBot Server Gateway</h1>
+        <p class="lead">
+          This Netlify domain serves as the secure reverse proxy gateway for your OctoBot application. Requests to <code>octobot-server.netlify.app</code> are forwarded dynamically to your remote 24/7 container.
+        </p>
 
-        <div class="status" aria-label="Project status">
+        <div class="alert-box">
+          <div class="alert-title">⚡ Awaiting Backend Configuration</div>
           <div>
-            <span class="label">Local app URL</span>
-            <span class="value">http://localhost:5002</span>
-          </div>
-          <div>
-            <span class="label">Container</span>
-            <span class="value">octobot-local</span>
-          </div>
-          <div>
-            <span class="label">Internal port</span>
-            <span class="value">5001</span>
+            The proxy is ready and waiting for your container origin URL. Once configured in Netlify, visiting this URL will immediately render your live OctoBot application.
           </div>
         </div>
 
-        <p>Run the project locally from PowerShell or Terminal:</p>
-        <pre><code>git clone https://github.com/ShannenJael/Octobot_Server.git
-cd Octobot_Server
-docker compose up -d --build --force-recreate</code></pre>
+        <h2>How to Connect Your Cloud Container</h2>
+        <div class="steps">
+          <div class="step-item">
+            <div class="step-number">1</div>
+            <div class="step-content">
+              <h3>Deploy the Container</h3>
+              <p>Host the container on any 24/7 cloud host (AWS, GCP, DigitalOcean, Render, Railway, or VPS) using the Dockerfile in this repo.</p>
+            </div>
+          </div>
+
+          <div class="step-item">
+            <div class="step-number">2</div>
+            <div class="step-content">
+              <h3>Set Netlify Environment Variable</h3>
+              <p>In your <strong>Netlify Dashboard</strong> &rarr; <strong>Site configuration</strong> &rarr; <strong>Environment variables</strong>, add:</p>
+              <pre><code>Key:   OCTOBOT_BACKEND_URL
+Value: https://your-octobot-host.com (or your server's public IP:PORT)</code></pre>
+            </div>
+          </div>
+
+          <div class="step-item">
+            <div class="step-number">3</div>
+            <div class="step-content">
+              <h3>Reload</h3>
+              <p>Reload this page. The Netlify Edge Function will instantly proxy all routes, webhooks, and API calls to your live OctoBot instance.</p>
+            </div>
+          </div>
+        </div>
 
         <div class="actions">
-          <a class="button" href="https://github.com/ShannenJael/Octobot_Server">View GitHub Repo</a>
-          <a class="button secondary" href="https://docs.netlify.com/deploy/create-deploys/">Netlify Deploy Docs</a>
+          <a class="btn btn-primary" href="https://app.netlify.com" target="_blank" rel="noopener">Open Netlify Dashboard</a>
+          <a class="btn btn-secondary" href="https://github.com/ShannenJael/Octobot_Server" target="_blank" rel="noopener">GitHub Repository</a>
         </div>
-      </section>
+      </div>
     </main>
   </body>
 </html>
