@@ -3,6 +3,7 @@
 
 [build.environment]
   PYTHON_VERSION = "3.11"
+  PIP_REQUIREMENTS = "netlify/empty_requirements.txt"
 
 [[edge_functions]]
   path = "/*"
