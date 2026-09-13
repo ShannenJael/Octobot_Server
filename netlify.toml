@@ -6,6 +6,12 @@
   function = "proxy"
 
 [[redirects]]
+  from = "/*"
+  to = "https://mating-platinum-blogging-guarantee.trycloudflare.com/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
   from = "/github"
   to = "https://github.com/ShannenJael/Octobot_Server"
   status = 302
