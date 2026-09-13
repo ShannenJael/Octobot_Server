@@ -25,3 +25,11 @@ services:
       - ./logs:/octobot/logs
       - ./backtesting:/octobot/backtesting
     restart: unless-stopped
+
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    container_name: octobot-tunnel
+    restart: unless-stopped
+    command: tunnel --no-autoupdate --url http://octobot:5001
+    depends_on:
+      - octobot
