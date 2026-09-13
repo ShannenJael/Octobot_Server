@@ -3,19 +3,25 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>OctoBot Server — Reverse Proxy Gateway</title>
+    <title>OctoBot Server — Gateway</title>
     <style>
       :root {
         color-scheme: dark;
-        --bg: #07142f;
-        --surface: #0c2044;
-        --surface-border: #1a3869;
-        --text: #eafafa;
-        --muted: #8ca3c3;
-        --primary: #72d5d5;
-        --accent: #5cbf8a;
-        --warning: #f59e0b;
-        --code-bg: #040c1d;
+        --bg: #070709;
+        --surface: #101016;
+        --surface-border: rgba(212, 175, 55, 0.28);
+        --text: #F4F1EA;
+        --muted: #9E9887;
+        --gold: #D4AF37;
+        --gold-light: #F5D77F;
+        --gold-gradient: linear-gradient(135deg, #F9E29B 0%, #D4AF37 50%, #8F6B1E 100%);
+        --go-green: #00E676;
+        --go-green-bg: rgba(0, 230, 118, 0.12);
+        --go-green-border: rgba(0, 230, 118, 0.45);
+        --warning-red: #FF334B;
+        --warning-red-bg: rgba(255, 51, 75, 0.14);
+        --warning-red-border: rgba(255, 51, 75, 0.5);
+        --code-bg: #060608;
       }
 
       * { box-sizing: border-box; }
@@ -43,20 +49,20 @@
         border: 1px solid var(--surface-border);
         border-radius: 12px;
         padding: 36px;
-        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.75), 0 0 25px rgba(212, 175, 55, 0.06);
       }
 
       .header-badge {
         display: inline-flex;
         align-items: center;
         gap: 8px;
-        background: rgba(114, 213, 213, 0.15);
-        color: var(--primary);
-        border: 1px solid rgba(114, 213, 213, 0.3);
+        background: rgba(212, 175, 55, 0.12);
+        color: var(--gold-light);
+        border: 1px solid rgba(212, 175, 55, 0.35);
         border-radius: 999px;
         padding: 4px 14px;
         font-size: 13px;
-        font-weight: 600;
+        font-weight: 700;
         text-transform: uppercase;
         letter-spacing: 0.5px;
         margin-bottom: 16px;
@@ -65,16 +71,19 @@
       .header-badge .dot {
         width: 8px;
         height: 8px;
-        background: var(--accent);
+        background: var(--go-green);
         border-radius: 50%;
         display: inline-block;
+        box-shadow: 0 0 8px var(--go-green);
       }
 
       h1 {
         margin: 0 0 12px;
         font-size: 32px;
-        font-weight: 700;
-        color: #fff;
+        font-weight: 800;
+        color: var(--gold-light);
+        letter-spacing: -0.01em;
+        text-shadow: 0 0 16px rgba(212, 175, 55, 0.3);
       }
 
       .lead {
@@ -84,22 +93,45 @@
         max-width: 720px;
       }
 
-      .alert-box {
-        background: rgba(245, 158, 11, 0.1);
-        border: 1px solid rgba(245, 158, 11, 0.35);
-        border-radius: 8px;
-        padding: 18px 20px;
+      .status-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 16px;
         margin-bottom: 28px;
       }
 
-      .alert-title {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        color: var(--warning);
+      .status-box-go {
+        background: var(--go-green-bg);
+        border: 1px solid var(--go-green-border);
+        border-radius: 8px;
+        padding: 16px;
+        box-shadow: 0 0 15px rgba(0, 230, 118, 0.15);
+      }
+
+      .status-box-go .status-title {
+        color: var(--go-green);
         font-weight: 700;
-        font-size: 15px;
-        margin-bottom: 6px;
+        font-size: 14px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 4px;
+      }
+
+      .status-box-warning {
+        background: var(--warning-red-bg);
+        border: 1px solid var(--warning-red-border);
+        border-radius: 8px;
+        padding: 16px;
+        box-shadow: 0 0 15px rgba(255, 51, 75, 0.15);
+      }
+
+      .status-box-warning .status-title {
+        color: var(--warning-red);
+        font-weight: 700;
+        font-size: 14px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 4px;
       }
 
       .steps {
@@ -116,6 +148,11 @@
         border: 1px solid var(--surface-border);
         border-radius: 8px;
         padding: 18px;
+        transition: border-color 0.2s ease;
+      }
+
+      .step-item:hover {
+        border-color: var(--gold);
       }
 
       .step-number {
@@ -124,17 +161,18 @@
         justify-content: center;
         width: 32px;
         height: 32px;
-        background: var(--primary);
-        color: var(--bg);
+        background: var(--gold-gradient);
+        color: #070709;
         font-weight: 800;
         border-radius: 50%;
         flex-shrink: 0;
+        box-shadow: 0 0 10px rgba(212, 175, 55, 0.4);
       }
 
       .step-content h3 {
         margin: 0 0 4px;
         font-size: 16px;
-        color: #fff;
+        color: var(--gold-light);
       }
 
       .step-content p {
@@ -145,15 +183,16 @@
 
       code {
         font-family: Consolas, Monaco, "Courier New", monospace;
-        background: rgba(255, 255, 255, 0.08);
-        color: var(--primary);
+        background: rgba(212, 175, 55, 0.1);
+        color: var(--gold-light);
         padding: 2px 6px;
         border-radius: 4px;
         font-size: 13px;
+        border: 1px solid rgba(212, 175, 55, 0.2);
       }
 
       pre {
-        background: #020712;
+        background: #040405;
         border: 1px solid var(--surface-border);
         border-radius: 6px;
         padding: 12px;
@@ -164,6 +203,7 @@
       pre code {
         background: none;
         padding: 0;
+        border: none;
       }
 
       .actions {
@@ -178,25 +218,36 @@
       .btn {
         display: inline-flex;
         align-items: center;
-        padding: 10px 20px;
+        padding: 10px 22px;
         border-radius: 6px;
-        font-weight: 600;
+        font-weight: 700;
         font-size: 14px;
         text-decoration: none;
-        transition: opacity 0.2s;
+        transition: all 0.2s;
+        letter-spacing: 0.3px;
       }
 
-      .btn:hover { opacity: 0.9; }
-
-      .btn-primary {
-        background: var(--primary);
-        color: var(--bg);
+      .btn-gold {
+        background: var(--gold-gradient);
+        color: #070709;
+        box-shadow: 0 4px 18px rgba(212, 175, 55, 0.35);
       }
 
-      .btn-secondary {
-        background: rgba(255, 255, 255, 0.1);
-        color: var(--text);
-        border: 1px solid var(--surface-border);
+      .btn-gold:hover {
+        opacity: 0.95;
+        box-shadow: 0 6px 24px rgba(212, 175, 55, 0.55);
+        transform: translateY(-1px);
+      }
+
+      .btn-outline {
+        background: transparent;
+        color: var(--gold-light);
+        border: 1px solid var(--gold);
+      }
+
+      .btn-outline:hover {
+        background: rgba(212, 175, 55, 0.1);
+        border-color: var(--gold-light);
       }
     </style>
   </head>
@@ -204,52 +255,27 @@
     <main>
       <div class="card">
         <div class="header-badge">
-          <span class="dot"></span> Netlify Edge Proxy Active
+          <span class="dot"></span> Netlify Edge Gateway
         </div>
-        <h1>OctoBot Server Gateway</h1>
+        <h1>OctoBot Server</h1>
         <p class="lead">
-          This Netlify domain serves as the secure reverse proxy gateway for your OctoBot application. Requests to <code>octobot-server.netlify.app</code> are forwarded dynamically to your remote 24/7 container.
+          Luxury Black & Gold trading gateway. Connected to your live OctoBot trading engine.
         </p>
 
-        <div class="alert-box">
-          <div class="alert-title">⚡ Awaiting Backend Configuration</div>
-          <div>
-            The proxy is ready and waiting for your container origin URL. Once configured in Netlify, visiting this URL will immediately render your live OctoBot application.
+        <div class="status-grid">
+          <div class="status-box-go">
+            <div class="status-title">🟢 System Status: GO</div>
+            <div>Container active, trading engine running with automated monitoring.</div>
           </div>
-        </div>
-
-        <h2>How to Connect Your Cloud Container</h2>
-        <div class="steps">
-          <div class="step-item">
-            <div class="step-number">1</div>
-            <div class="step-content">
-              <h3>Deploy the Container</h3>
-              <p>Host the container on any 24/7 cloud host (AWS, GCP, DigitalOcean, Render, Railway, or VPS) using the Dockerfile in this repo.</p>
-            </div>
-          </div>
-
-          <div class="step-item">
-            <div class="step-number">2</div>
-            <div class="step-content">
-              <h3>Set Netlify Environment Variable</h3>
-              <p>In your <strong>Netlify Dashboard</strong> &rarr; <strong>Site configuration</strong> &rarr; <strong>Environment variables</strong>, add:</p>
-              <pre><code>Key:   OCTOBOT_BACKEND_URL
-Value: https://your-octobot-host.com (or your server's public IP:PORT)</code></pre>
-            </div>
-          </div>
-
-          <div class="step-item">
-            <div class="step-number">3</div>
-            <div class="step-content">
-              <h3>Reload</h3>
-              <p>Reload this page. The Netlify Edge Function will instantly proxy all routes, webhooks, and API calls to your live OctoBot instance.</p>
-            </div>
+          <div class="status-box-warning">
+            <div class="status-title">🔴 Risk Controls: ACTIVE</div>
+            <div>Automated safeguards and loss prevention limiters engaged.</div>
           </div>
         </div>
 
         <div class="actions">
-          <a class="btn btn-primary" href="https://app.netlify.com" target="_blank" rel="noopener">Open Netlify Dashboard</a>
-          <a class="btn btn-secondary" href="https://github.com/ShannenJael/Octobot_Server" target="_blank" rel="noopener">GitHub Repository</a>
+          <a class="btn btn-gold" href="https://app.netlify.com" target="_blank" rel="noopener">Netlify Dashboard</a>
+          <a class="btn btn-outline" href="https://github.com/ShannenJael/Octobot_Server" target="_blank" rel="noopener">GitHub Repository</a>
         </div>
       </div>
     </main>

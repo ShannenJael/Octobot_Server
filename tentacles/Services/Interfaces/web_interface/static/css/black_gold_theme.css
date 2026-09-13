@@ -1,0 +1,489 @@
+/* ==========================================================================
+   OCTOBOT LUXURY THEME: BLACK & GOLD
+   Accents: Champagne & Metallic Gold
+   Warnings / Stop: Vivid Crimson Red
+   Positive / Go / Profit: Vivid Emerald Green
+   ========================================================================== */
+
+:root,
+:root[data-mdb-theme="dark"],
+:root[data-mdb-theme="light"],
+body {
+    /* Primary Black & Gold Tokens */
+    --gold-primary: #D4AF37;
+    --gold-light: #F5D77F;
+    --gold-lighter: #FFF1C5;
+    --gold-dark: #9A7B2C;
+    --gold-glow: rgba(212, 175, 55, 0.35);
+    --gold-border: rgba(212, 175, 55, 0.25);
+    --gold-gradient: linear-gradient(135deg, #F9E29B 0%, #D4AF37 50%, #8F6B1E 100%);
+    --gold-gradient-hover: linear-gradient(135deg, #FFF0BA 0%, #E5BE47 50%, #A37B24 100%);
+
+    /* Backgrounds */
+    --bg-black: #08080a;
+    --bg-surface-1: #101015;
+    --bg-surface-2: #16161f;
+    --bg-surface-3: #1c1c28;
+
+    /* Text */
+    --text-primary: #F4F1EA;
+    --text-gold: #F5D77F;
+    --text-muted: #9E9887;
+
+    /* Positive Go / Profit (Green) */
+    --color-go: #00E676;
+    --color-go-hover: #00C853;
+    --color-go-bg: rgba(0, 230, 118, 0.12);
+    --color-go-border: rgba(0, 230, 118, 0.45);
+    --color-go-glow: 0 0 12px rgba(0, 230, 118, 0.35);
+
+    /* Warning / Stop / Loss (Red) */
+    --color-warning: #FF334B;
+    --color-warning-hover: #D90429;
+    --color-warning-bg: rgba(255, 51, 75, 0.14);
+    --color-warning-border: rgba(255, 51, 75, 0.5);
+    --color-warning-glow: 0 0 12px rgba(255, 51, 75, 0.35);
+
+    /* MDB & Bootstrap Overrides */
+    --mdb-primary: var(--text-primary);
+    --mdb-primary-rgb: 244, 241, 234;
+    --mdb-secondary: var(--gold-primary);
+    --mdb-secondary-rgb: 212, 175, 55;
+    --mdb-secondary-500: var(--gold-light);
+    --mdb-secondary-500-rgb: 245, 215, 127;
+    --mdb-bg: var(--bg-black);
+    --mdb-bg-rgb: 8, 8, 10;
+    --mdb-bg-500: var(--bg-surface-1);
+
+    --mdb-body-bg: var(--bg-black);
+    --mdb-body-color: var(--text-primary);
+    --mdb-heading-color: var(--gold-light);
+    --mdb-card-bg: var(--bg-surface-1);
+    --mdb-card-color: var(--text-primary);
+    --mdb-navbar-bg: var(--bg-surface-1);
+    --mdb-navbar-color: var(--text-primary);
+    --mdb-surface-bg: var(--bg-surface-2);
+
+    /* Table */
+    --mdb-table-bg: var(--bg-surface-1);
+    --mdb-table-color: var(--text-primary);
+    --mdb-table-headings-bg: var(--bg-surface-2);
+    --mdb-table-headings-color: var(--gold-light);
+
+    /* Charts */
+    --local-price-chart-buy-color: var(--color-go);
+    --local-price-chart-candle-buy-color: var(--color-go);
+    --local-price-chart-sell-color: var(--color-warning);
+    --local-price-chart-candle-sell-color: var(--color-warning);
+    --local-price-chart-stop-color: var(--color-warning);
+}
+
+/* ==========================================================================
+   GLOBAL BASE & TYPOGRAPHY
+   ========================================================================== */
+html, body {
+    background-color: var(--bg-black) !important;
+    color: var(--text-primary) !important;
+    font-family: "DM Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+}
+
+h1, h2, h3, h4, h5, h6 {
+    color: var(--gold-light) !important;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+}
+
+p, span, div, label {
+    color: var(--text-primary);
+}
+
+.text-muted, small {
+    color: var(--text-muted) !important;
+}
+
+/* Links */
+a {
+    color: var(--gold-primary) !important;
+    text-decoration: none;
+    transition: all 0.2s ease-in-out;
+}
+
+a:hover {
+    color: var(--gold-light) !important;
+    text-shadow: 0 0 8px var(--gold-glow);
+}
+
+/* ==========================================================================
+   NAVBAR (BLACK & GOLD EMBASSY)
+   ========================================================================== */
+.navbar, #main-nav-bar {
+    background: rgba(14, 14, 18, 0.95) !important;
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border-bottom: 1px solid var(--gold-border) !important;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.8), 0 1px 0 rgba(212, 175, 55, 0.2) !important;
+}
+
+.navbar-brand {
+    color: var(--gold-light) !important;
+    font-weight: 800 !important;
+    letter-spacing: 0.5px;
+    text-shadow: 0 0 12px var(--gold-glow);
+}
+
+.navbar-brand .navbar-logo {
+    filter: drop-shadow(0 0 6px var(--gold-primary));
+}
+
+.navbar-nav .nav-link {
+    color: #edeae1 !important;
+    font-weight: 600;
+    font-size: 14px;
+    padding: 8px 16px !important;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+    border-bottom: 2px solid transparent;
+}
+
+.navbar-nav .nav-link:hover {
+    color: var(--gold-light) !important;
+    background: rgba(212, 175, 55, 0.08);
+    border-bottom-color: var(--gold-primary);
+}
+
+.navbar-nav .nav-item.active .nav-link {
+    color: var(--gold-light) !important;
+    background: rgba(212, 175, 55, 0.12);
+    border-bottom: 2px solid var(--gold-primary);
+    box-shadow: 0 2px 10px rgba(212, 175, 55, 0.2);
+}
+
+/* Bot Status Icon */
+#navbar-bot-status {
+    color: var(--color-go) !important;
+    filter: drop-shadow(0 0 6px var(--color-go));
+}
+
+/* ==========================================================================
+   CARDS & PANELS (OBSIDIAN & GOLD BORDERS)
+   ========================================================================== */
+.card {
+    background-color: var(--bg-surface-1) !important;
+    border: 1px solid var(--gold-border) !important;
+    border-radius: 12px !important;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.65), 0 0 15px rgba(212, 175, 55, 0.04) !important;
+    overflow: hidden;
+    transition: border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.card:hover {
+    border-color: rgba(212, 175, 55, 0.45) !important;
+    box-shadow: 0 14px 36px rgba(0, 0, 0, 0.8), 0 0 20px rgba(212, 175, 55, 0.1) !important;
+}
+
+.card-header {
+    background-color: var(--bg-surface-2) !important;
+    border-bottom: 1px solid var(--gold-border) !important;
+    color: var(--gold-light) !important;
+    font-weight: 700;
+    padding: 16px 20px !important;
+}
+
+.card-header h2, .card-header h3, .card-header h4, .card-header h5 {
+    color: var(--gold-light) !important;
+    margin-bottom: 0;
+}
+
+.card-body {
+    background-color: var(--bg-surface-1) !important;
+    color: var(--text-primary) !important;
+    padding: 22px !important;
+}
+
+.card-footer {
+    background-color: var(--bg-surface-2) !important;
+    border-top: 1px solid var(--gold-border) !important;
+    color: var(--text-muted) !important;
+}
+
+/* ==========================================================================
+   BUTTONS (GOLD METALLIC, EMERALD GO, CRIMSON WARNING)
+   ========================================================================== */
+/* Primary Gold Button */
+.btn-primary, .btn-secondary, button[route*="update"] {
+    background: var(--gold-gradient) !important;
+    color: #070709 !important;
+    font-weight: 700 !important;
+    border: none !important;
+    border-radius: 6px !important;
+    padding: 9px 20px !important;
+    letter-spacing: 0.3px;
+    box-shadow: 0 4px 15px rgba(212, 175, 55, 0.35) !important;
+    transition: all 0.2s ease !important;
+}
+
+.btn-primary:hover, .btn-secondary:hover {
+    background: var(--gold-gradient-hover) !important;
+    color: #000000 !important;
+    box-shadow: 0 6px 22px rgba(212, 175, 55, 0.55) !important;
+    transform: translateY(-1px);
+}
+
+.btn-outline-primary {
+    background: transparent !important;
+    border: 1px solid var(--gold-primary) !important;
+    color: var(--gold-light) !important;
+    box-shadow: 0 0 10px rgba(212, 175, 55, 0.15) !important;
+}
+
+.btn-outline-primary:hover {
+    background: var(--gold-gradient) !important;
+    color: #070709 !important;
+    border-color: var(--gold-light) !important;
+    box-shadow: 0 0 20px rgba(212, 175, 55, 0.45) !important;
+}
+
+/* Green Positive / Go Button */
+.btn-success, .success-color, .btn-go {
+    background: linear-gradient(135deg, #10B981 0%, #059669 100%) !important;
+    color: #ffffff !important;
+    border: none !important;
+    font-weight: 700 !important;
+    box-shadow: var(--color-go-glow) !important;
+}
+
+.btn-success:hover {
+    background: linear-gradient(135deg, #34D399 0%, #10B981 100%) !important;
+    box-shadow: 0 0 18px rgba(0, 230, 118, 0.6) !important;
+    transform: translateY(-1px);
+}
+
+/* Red Warning / Stop Button */
+.btn-danger, .btn-warning, .danger-color, .warning-color, .btn-stop {
+    background: linear-gradient(135deg, #EF4444 0%, #B91C1C 100%) !important;
+    color: #ffffff !important;
+    border: none !important;
+    font-weight: 700 !important;
+    box-shadow: var(--color-warning-glow) !important;
+}
+
+.btn-danger:hover, .btn-warning:hover {
+    background: linear-gradient(135deg, #F87171 0%, #DC2626 100%) !important;
+    box-shadow: 0 0 18px rgba(255, 51, 75, 0.6) !important;
+    transform: translateY(-1px);
+}
+
+/* ==========================================================================
+   ALERTS: RED WARNINGS & GREEN POSITIVE GO
+   ========================================================================== */
+/* Red Warnings (Both Warning & Danger alerts styled with vivid Red) */
+.alert-warning,
+.alert-danger {
+    background: var(--color-warning-bg) !important;
+    border: 1px solid var(--color-warning-border) !important;
+    color: #FFA4AD !important;
+    border-radius: 8px !important;
+    box-shadow: 0 4px 18px rgba(255, 51, 75, 0.2) !important;
+}
+
+.alert-warning h1, .alert-warning h2, .alert-warning h3, .alert-warning h4, .alert-warning h5,
+.alert-danger h1, .alert-danger h2, .alert-danger h3, .alert-danger h4, .alert-danger h5,
+.alert-warning strong, .alert-danger strong {
+    color: var(--color-warning) !important;
+    text-shadow: 0 0 8px rgba(255, 51, 75, 0.4);
+}
+
+/* Green Positive Go Alert */
+.alert-success {
+    background: var(--color-go-bg) !important;
+    border: 1px solid var(--color-go-border) !important;
+    color: #A7F3D0 !important;
+    border-radius: 8px !important;
+    box-shadow: 0 4px 18px rgba(0, 230, 118, 0.2) !important;
+}
+
+.alert-success h1, .alert-success h2, .alert-success h3, .alert-success h4, .alert-success h5,
+.alert-success strong {
+    color: var(--color-go) !important;
+    text-shadow: 0 0 8px rgba(0, 230, 118, 0.4);
+}
+
+/* Info Alert (Black & Gold) */
+.alert-info {
+    background: rgba(212, 175, 55, 0.1) !important;
+    border: 1px solid var(--gold-border) !important;
+    color: var(--gold-lighter) !important;
+    border-radius: 8px !important;
+}
+
+.alert-info i, .alert-info strong {
+    color: var(--gold-light) !important;
+}
+
+/* ==========================================================================
+   BADGES & TRADING INDICATORS
+   ========================================================================== */
+.badge {
+    border-radius: 6px !important;
+    font-weight: 700 !important;
+    padding: 5px 10px !important;
+    letter-spacing: 0.3px;
+}
+
+/* Positive Go / Buy / Profit Badges */
+.badge-success, .badge-go, .profitability-positive, [data-badge="success"] {
+    background: var(--color-go-bg) !important;
+    color: var(--color-go) !important;
+    border: 1px solid var(--color-go-border) !important;
+    box-shadow: var(--color-go-glow);
+}
+
+/* Red Warning / Stop / Loss Badges */
+.badge-danger, .badge-warning, .badge-stop, .profitability-negative, [data-badge="danger"] {
+    background: var(--color-warning-bg) !important;
+    color: var(--color-warning) !important;
+    border: 1px solid var(--color-warning-border) !important;
+    box-shadow: var(--color-warning-glow);
+}
+
+/* Gold / Neutral Badges */
+.badge-primary, .badge-info, .badge-light {
+    background: rgba(212, 175, 55, 0.15) !important;
+    color: var(--gold-light) !important;
+    border: 1px solid var(--gold-border) !important;
+}
+
+/* Profitability Display */
+#profitability-badge.badge-success {
+    background: var(--color-go) !important;
+    color: #070709 !important;
+    font-weight: 800 !important;
+}
+
+#profitability-badge.badge-danger {
+    background: var(--color-warning) !important;
+    color: #ffffff !important;
+    font-weight: 800 !important;
+}
+
+/* ==========================================================================
+   TABLES & DATATABLES
+   ========================================================================== */
+.table {
+    background-color: var(--bg-surface-1) !important;
+    color: var(--text-primary) !important;
+    border-collapse: separate !important;
+    border-spacing: 0 4px;
+}
+
+.table thead th, th {
+    background-color: var(--bg-surface-2) !important;
+    color: var(--gold-light) !important;
+    border-bottom: 2px solid var(--gold-primary) !important;
+    font-weight: 700;
+    text-transform: uppercase;
+    font-size: 12px;
+    letter-spacing: 0.8px;
+    padding: 12px 14px !important;
+}
+
+.table tbody tr {
+    background-color: var(--bg-surface-1) !important;
+    transition: background-color 0.2s ease;
+}
+
+.table tbody tr:hover {
+    background-color: var(--bg-surface-2) !important;
+    box-shadow: inset 3px 0 0 var(--gold-primary);
+}
+
+.table td {
+    border-top: 1px solid rgba(255, 255, 255, 0.05) !important;
+    padding: 12px 14px !important;
+    vertical-align: middle;
+}
+
+/* ==========================================================================
+   FORMS, INPUTS & DROPDOWNS
+   ========================================================================== */
+input, select, textarea, .form-control, .select2-selection {
+    background-color: var(--bg-surface-2) !important;
+    border: 1px solid var(--gold-border) !important;
+    color: var(--text-primary) !important;
+    border-radius: 6px !important;
+    padding: 8px 12px !important;
+}
+
+input:focus, select:focus, textarea:focus, .form-control:focus {
+    background-color: var(--bg-surface-3) !important;
+    border-color: var(--gold-primary) !important;
+    box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.25) !important;
+    color: #ffffff !important;
+}
+
+.dropdown-menu, .select2-dropdown {
+    background-color: var(--bg-surface-2) !important;
+    border: 1px solid var(--gold-border) !important;
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.85) !important;
+    border-radius: 8px !important;
+}
+
+.dropdown-item, .select2-results__option {
+    color: var(--text-primary) !important;
+}
+
+.dropdown-item:hover, .select2-results__option--highlighted {
+    background-color: rgba(212, 175, 55, 0.15) !important;
+    color: var(--gold-light) !important;
+}
+
+/* ==========================================================================
+   MODALS
+   ========================================================================== */
+.modal-content {
+    background-color: var(--bg-surface-1) !important;
+    border: 1px solid var(--gold-border) !important;
+    border-radius: 12px !important;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.9), 0 0 30px rgba(212, 175, 55, 0.15) !important;
+}
+
+.modal-header {
+    border-bottom: 1px solid var(--gold-border) !important;
+    background-color: var(--bg-surface-2) !important;
+}
+
+.modal-footer {
+    border-top: 1px solid var(--gold-border) !important;
+    background-color: var(--bg-surface-2) !important;
+}
+
+.close {
+    color: var(--gold-light) !important;
+    opacity: 0.8;
+}
+
+.close:hover {
+    color: #ffffff !important;
+    opacity: 1;
+}
+
+/* ==========================================================================
+   GOLDEN SCROLLBAR
+   ========================================================================== */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--bg-black);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--gold-dark);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--gold-primary);
+}
