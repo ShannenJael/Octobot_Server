@@ -564,11 +564,34 @@ input:focus, select:focus, textarea:focus, .form-control:focus {
     border-radius: 8px !important;
 }
 
+.bootstrap-select > select.selectpicker {
+    display: none !important;
+}
+
+.bootstrap-select .dropdown-menu.show {
+    max-height: min(420px, calc(100vh - 96px)) !important;
+    height: auto !important;
+    overflow: hidden !important;
+    z-index: 1055 !important;
+}
+
+.bootstrap-select .dropdown-menu .inner.show,
+.bootstrap-select .dropdown-menu ul.dropdown-menu.inner.show {
+    max-height: calc(min(420px, 100vh - 96px) - 48px) !important;
+    height: auto !important;
+    overflow-y: auto !important;
+}
+
 .dropdown-item, .select2-results__option {
     color: var(--text-primary) !important;
 }
 
-.dropdown-item:hover, .select2-results__option--highlighted {
+.dropdown-item:hover,
+.dropdown-item:focus,
+.bootstrap-select .dropdown-item.active,
+.bootstrap-select .dropdown-item:active,
+.bootstrap-select .dropdown-item.selected,
+.select2-results__option--highlighted {
     background-color: rgba(212, 175, 55, 0.15) !important;
     color: var(--gold-light) !important;
 }
