@@ -1,0 +1,6 @@
+{
+  "min_buy_score": 75.0,
+  "max_sell_score": 40.0,
+  "max_spread_bps": 25.0,
+  "time_frame": "1h"
+}

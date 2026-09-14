@@ -1,0 +1,8 @@
+{
+  "version": "1.0.0",
+  "origin_package": "OctoBot-Default-Tentacles",
+  "tentacles": [
+    "MarketRadarStrategyEvaluator"
+  ],
+  "tentacles-requirements": []
+}

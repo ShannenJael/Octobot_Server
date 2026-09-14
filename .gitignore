@@ -116,6 +116,31 @@ backtesting/data/
 tentacles
 downloaded_temp_tentacles
 
+# Source-controlled Market Radar web plug-in (all other downloaded tentacles stay ignored).
+!tentacles/
+tentacles/*
+!tentacles/Services/
+tentacles/Services/*
+!tentacles/Services/Interfaces/
+tentacles/Services/Interfaces/*
+!tentacles/Services/Interfaces/web_interface/
+tentacles/Services/Interfaces/web_interface/*
+!tentacles/Services/Interfaces/web_interface/plugins/
+tentacles/Services/Interfaces/web_interface/plugins/*
+!tentacles/Services/Interfaces/web_interface/plugins/__init__.py
+!tentacles/Services/Interfaces/web_interface/plugins/market_radar_plugin.py
+!tentacles/Services/Interfaces/web_interface/plugins/market_radar_assets/
+!tentacles/Services/Interfaces/web_interface/plugins/market_radar_assets/**
+!tentacles/Evaluator/
+tentacles/Evaluator/*
+!tentacles/Evaluator/Strategies/
+tentacles/Evaluator/Strategies/*
+!tentacles/Evaluator/Strategies/market_radar_strategy_evaluator/
+!tentacles/Evaluator/Strategies/market_radar_strategy_evaluator/**
+tentacles/**/__pycache__/
+tentacles/**/*.py[cod]
+
+
 # User config
 user/
 temp_config.json

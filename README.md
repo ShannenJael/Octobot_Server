@@ -77,6 +77,13 @@ docker compose down
 
 Netlify note: Netlify is a good fit for static front ends and serverless functions, but it does not run long-lived Docker containers. Once the local container works, host the OctoBot container on a Docker-capable host and use Netlify only for a separate front end or public landing page.
 
+### AWS deployment
+
+The repository includes an AWS deployment in [`aws/`](aws/README.md). It runs a
+single OctoBot container on ECS Fargate behind an Application Load Balancer, with
+encrypted EFS storage for persistent state and CloudWatch logging. AWS deployment
+does not require Netlify or Cloudflare.
+
 ## Exchanges
 [![All OctoBot supported exchanges](../assets/exchange_logo.png)](https://www.octobot.cloud/en/guides/exchanges?utm_source=github&utm_medium=dk&utm_campaign=regular_open_source_content&utm_content=binance)
 
@@ -140,6 +147,13 @@ Make changes and contribute to OctoBot in a single click with an **already setup
 - Disk : 1 GB
 
 ## Disclaimer
+
+## AI Market Radar
+
+Open **Market Radar** in the OctoBot navigation to rank liquid Crypto.com USDT spot markets. The scanner uses public REST candles on 1h, 4h, and 1D timeframes, records versioned predictions and later 4h/24h/72h outcomes under `user/market_radar`, and never submits an order.
+
+The local deterministic explanation is always available. Optional OpenAI wording can be enabled with `MARKET_RADAR_AI_ENABLED=true` and `OPENAI_API_KEY`; numeric scoring remains authoritative and no news sentiment is claimed without a verified news feed. Paper candidates remain disabled until validation. Enabling `MARKET_RADAR_PAPER_HANDOFF_ENABLED=true` only writes a candidate with `execution_status=not_submitted`; it does not execute a trade.
+
 Do not risk money which you are afraid to lose. USE THE SOFTWARE AT YOUR OWN RISK. THE AUTHORS 
 AND ALL AFFILIATES ASSUME NO RESPONSIBILITY FOR YOUR TRADING RESULTS. 
 

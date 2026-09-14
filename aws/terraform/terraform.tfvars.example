@@ -1,0 +1,21 @@
+# Find your current public address with https://checkip.amazonaws.com and use
+# a /32 so the dashboard is not open to the entire internet.
+allowed_ipv4_cidrs = ["203.0.113.10/32"]
+
+aws_region = "us-east-2"
+name       = "octobot"
+
+# Pin this to a tested version or immutable digest before live trading.
+container_image = "drakkarsoftware/octobot:stable"
+
+# Optional production hardening. This adds the fixed cost of a NAT gateway.
+use_nat_gateway = false
+
+# Optional HTTPS. The ACM certificate must exist in the selected AWS Region.
+# certificate_arn = "arn:aws:acm:us-east-2:123456789012:certificate/00000000-0000-0000-0000-000000000000"
+# domain_name     = "octobot.example.com"
+
+tags = {
+  Environment = "production"
+  Owner       = "your-name"
+}

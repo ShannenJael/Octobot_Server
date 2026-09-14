@@ -1,0 +1,216 @@
+{% extends "layout.html" %}
+{% set active_page = "market_radar" %}
+{% set page_title = "AI Market Radar" %}
+
+{% block additional_style %}
+<link rel="stylesheet" href="{{ url_for('market_radar.static', filename='market_radar.css') }}">
+{% endblock additional_style %}
+
+{% block body %}
+<main class="radar-shell my-4" id="market-radar"
+      data-scan-url="{{ url_for('market_radar.scan') }}"
+      data-detail-url="{{ url_for('market_radar.detail', instrument='__INSTRUMENT__') }}"
+      data-watchlist-url="{{ url_for('market_radar.watchlist') }}"
+      data-paper-url="{{ url_for('market_radar.paper_candidate') }}"
+      data-train-url="{{ url_for('market_radar.train') }}"
+      data-model-status-url="{{ url_for('market_radar.model_status') }}"
+      data-optimize-url="{{ url_for('market_radar.optimize') }}"
+      data-strategy-params-url="{{ url_for('market_radar.strategy_params') }}"
+      data-sentiment-url="{{ url_for('market_radar.sentiment') }}"
+      data-news-url="{{ url_for('market_radar.news') }}">
+    <section class="radar-hero">
+        <div>
+            <p class="radar-kicker">RESEARCH CONSOLE</p>
+            <h1>AI Market Radar</h1>
+            <p class="radar-subtitle">Transparent multi-timeframe rankings for liquid Crypto.com USDT spot markets.</p>
+        </div>
+        <button class="btn radar-refresh" id="radar-refresh"><i class="fas fa-rotate"></i> Refresh market</button>
+    </section>
+
+    <div class="alert radar-disclaimer" role="alert">
+        <i class="fas fa-shield-halved"></i>
+        Advisory research only—not financial advice. Rankings never place orders. Paper handoff requires an explicit server-side opt-in.
+    </div>
+
+    <section class="radar-stats">
+        <article><span>Feed</span><strong id="radar-source">Loading…</strong></article>
+        <article><span>Model</span><strong id="radar-model">—</strong></article>
+        <article><span>Markets ranked</span><strong id="radar-count">—</strong></article>
+        <article><span>Last scan</span><strong id="radar-time">—</strong></article>
+    </section>
+
+    <!-- Sentiment & Live News Catalyst Barometer -->
+    <div class="radar-sentiment-grid mt-3">
+        <!-- Fear & Greed Gauge Card -->
+        <section class="radar-card radar-fng-card">
+            <div class="radar-toolbar">
+                <div>
+                    <h2><i class="fas fa-gauge-high text-info mr-2"></i>Market Sentiment & Fear/Greed</h2>
+                    <small>Real-time Alternative.me multi-factor index</small>
+                </div>
+                <span class="badge badge-pill badge-dark" id="fng-badge">Loading…</span>
+            </div>
+            <div class="p-3 text-center">
+                <div class="fng-dial-container">
+                    <div class="fng-dial" id="fng-dial">
+                        <div class="fng-needle" id="fng-needle"></div>
+                        <div class="fng-center-val">
+                            <span id="fng-val">—</span>
+                            <small id="fng-classification">Loading</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="fng-scale mt-3">
+                    <span class="fng-scale-item fng-extreme-fear">Ext Fear</span>
+                    <span class="fng-scale-item fng-fear">Fear</span>
+                    <span class="fng-scale-item fng-neutral">Neutral</span>
+                    <span class="fng-scale-item fng-greed">Greed</span>
+                    <span class="fng-scale-item fng-extreme-greed">Ext Greed</span>
+                </div>
+                <div class="fng-meta mt-3 text-muted small" id="fng-meta">
+                    <span>Blended market score: <strong id="fng-composite-val" class="text-light">—</strong></span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Live Crypto News & Catalyst Stream -->
+        <section class="radar-card radar-news-card">
+            <div class="radar-toolbar">
+                <div>
+                    <h2><i class="fas fa-newspaper text-success mr-2"></i>Live Market Catalysts</h2>
+                    <small>Real-time headlines & sentiment polarity</small>
+                </div>
+                <div class="news-filter-group" id="news-filters">
+                    <button class="btn btn-xs btn-outline-light active" data-filter="">All</button>
+                    <button class="btn btn-xs btn-outline-light" data-filter="BTC">BTC</button>
+                    <button class="btn btn-xs btn-outline-light" data-filter="ETH">ETH</button>
+                    <button class="btn btn-xs btn-outline-light" data-filter="SOL">SOL</button>
+                    <button class="btn btn-xs btn-outline-light" data-filter="CRO">CRO</button>
+                </div>
+            </div>
+            <div class="news-feed-container p-2" id="news-feed">
+                <div class="text-center py-4 text-muted"><i class="fas fa-spinner fa-spin mr-2"></i>Loading live crypto headlines…</div>
+            </div>
+        </section>
+    </div>
+
+    <section class="radar-card mt-3">
+        <div class="radar-toolbar">
+            <div>
+                <h2>Opportunity ranking</h2>
+                <small>Score = trend 30% · momentum 20% · liquidity 25% · volatility 15% · relative strength 10% − risk</small>
+            </div>
+            <label>Show
+                <select id="radar-limit" class="custom-select custom-select-sm">
+                    <option value="8">8</option><option value="12" selected>12</option><option value="20">20</option>
+                </select>
+            </label>
+        </div>
+        <div id="radar-error" class="alert alert-danger d-none"></div>
+        <div class="table-responsive">
+            <table class="table radar-table mb-0">
+                <thead><tr><th>#</th><th>Market</th><th>Score</th><th>24h</th><th>Volume</th><th>Spread</th><th>RSI</th><th>Risk</th><th></th></tr></thead>
+                <tbody id="radar-results"><tr><td colspan="9" class="text-center py-5">Collecting multi-timeframe data…</td></tr></tbody>
+            </table>
+        </div>
+    </section>
+
+    <!-- AI Studio: Automated Training, Strategy Optimization & Trading Bridge -->
+    <div class="radar-studio-grid mt-3">
+        <!-- Self-Tuning Model Trainer -->
+        <section class="radar-card radar-studio-card">
+            <div class="radar-toolbar">
+                <div>
+                    <h2><i class="fas fa-brain text-success mr-2"></i>AI Self-Tuning Model</h2>
+                    <small>Continuous weight optimization calibrated on prediction outcomes</small>
+                </div>
+                <button class="btn btn-sm btn-outline-success" id="btn-train-model">
+                    <i class="fas fa-play mr-1"></i> Run Training
+                </button>
+            </div>
+            <div class="p-3">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="text-muted small">STATUS:</span>
+                    <span class="badge badge-pill badge-dark" id="train-status-badge">Default Weights</span>
+                </div>
+                <div class="radar-weights-container" id="radar-weights-display">
+                    <div class="weight-bar-row"><span>Trend</span><div class="progress"><div class="progress-bar bg-info" style="width: 30%">30%</div></div></div>
+                    <div class="weight-bar-row"><span>Momentum</span><div class="progress"><div class="progress-bar bg-info" style="width: 20%">20%</div></div></div>
+                    <div class="weight-bar-row"><span>Liquidity</span><div class="progress"><div class="progress-bar bg-info" style="width: 25%">25%</div></div></div>
+                    <div class="weight-bar-row"><span>Volatility</span><div class="progress"><div class="progress-bar bg-info" style="width: 15%">15%</div></div></div>
+                    <div class="weight-bar-row"><span>Rel Strength</span><div class="progress"><div class="progress-bar bg-info" style="width: 10%">10%</div></div></div>
+                </div>
+                <div class="radar-metrics-row mt-3">
+                    <div><span>Samples:</span> <strong id="train-samples">0</strong></div>
+                    <div><span>Directional Acc:</span> <strong id="train-accuracy">—</strong></div>
+                    <div><span>Last Loss:</span> <strong id="train-loss">—</strong></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Automated Strategy Parameter Optimizer -->
+        <section class="radar-card radar-studio-card">
+            <div class="radar-toolbar">
+                <div>
+                    <h2><i class="fas fa-sliders-h text-warning mr-2"></i>Strategy Parameter Optimizer</h2>
+                    <small>Walk-forward backtest optimization on Crypto.com candle history</small>
+                </div>
+                <button class="btn btn-sm btn-outline-warning" id="btn-optimize-params">
+                    <i class="fas fa-crosshairs mr-1"></i> Optimize Parameters
+                </button>
+            </div>
+            <div class="p-3">
+                <div class="radar-params-grid" id="radar-params-display">
+                    <div class="param-box"><span>Min Buy Score</span><strong id="opt-buy-score">75.0</strong></div>
+                    <div class="param-box"><span>Take Profit</span><strong id="opt-tp">+3.0%</strong></div>
+                    <div class="param-box"><span>Stop Loss</span><strong id="opt-sl">-2.0%</strong></div>
+                    <div class="param-box"><span>Max Hold</span><strong id="opt-hold">24h</strong></div>
+                </div>
+                <div class="radar-backtest-metrics mt-3">
+                    <div><span>Win Rate:</span> <strong id="opt-win-rate" class="radar-positive">—</strong></div>
+                    <div><span>Profit Factor:</span> <strong id="opt-profit-factor">—</strong></div>
+                    <div><span>Sharpe:</span> <strong id="opt-sharpe">—</strong></div>
+                    <div><span>Max Drawdown:</span> <strong id="opt-drawdown" class="radar-negative">—</strong></div>
+                </div>
+                <div class="alert alert-secondary py-2 px-3 mt-3 mb-0 small text-light" style="background: #152b24; border-color: #265e50;">
+                    <i class="fas fa-robot text-success mr-1"></i> <strong>OctoBot Bridge:</strong> 
+                    <code>MarketRadarStrategyEvaluator</code> active & configured for Crypto.com.
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <section class="radar-card radar-detail d-none mt-3" id="radar-detail">
+        <button class="close" id="radar-detail-close" aria-label="Close">×</button>
+        <p class="radar-kicker">SIGNAL DETAIL</p>
+        <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap">
+            <h2 id="detail-symbol" class="mb-0">—</h2>
+            <div id="detail-sentiment-badge" class="badge badge-pill badge-dark px-3 py-2">Sentiment: —</div>
+        </div>
+        <p id="detail-explanation" class="lead text-light"></p>
+
+        <!-- Technical Components -->
+        <div class="radar-components" id="detail-components"></div>
+
+        <!-- Coin-Specific Catalysts & News -->
+        <div class="radar-detail-catalysts mt-3" id="detail-catalysts-box">
+            <h4 class="text-info mb-2"><i class="fas fa-bolt text-warning mr-2"></i>Recent Catalysts & Market News</h4>
+            <div id="detail-catalysts-list" class="detail-news-list">
+                <small class="text-muted">No recent news catalysts detected for this market.</small>
+            </div>
+        </div>
+
+        <div class="radar-detail-footer mt-4">
+            <span id="detail-sentiment" class="text-muted small"></span>
+            <div>
+                <button class="btn btn-sm btn-outline-info" id="detail-watch">Add to watchlist</button>
+                <button class="btn btn-sm btn-outline-warning" id="detail-paper">Queue paper candidate</button>
+            </div>
+        </div>
+    </section>
+</main>
+{% endblock %}
+
+{% block additional_scripts %}
+<script src="{{ url_for('market_radar.static', filename='market_radar.js') }}"></script>
+{% endblock additional_scripts %}
