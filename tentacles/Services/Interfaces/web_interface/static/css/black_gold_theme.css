@@ -903,3 +903,377 @@ button[update-url*="restart='true'"]:hover,
 ::-webkit-scrollbar-thumb:hover {
     background: var(--gold-primary);
 }
+
+/* ==========================================================================
+   ROLLING CAROUSEL CURRENCY SELECTOR & PAIR SEARCH
+   ========================================================================== */
+
+/* Fix clipping on currency dropdown and containers */
+#panelCurrency,
+#panelCurrency .card,
+#panelCurrency .card-body,
+.deck-container,
+.currency-adder-card,
+.currency-adder-card .card-body {
+    overflow: visible !important;
+}
+
+.currency-adder-card {
+    position: relative !important;
+    z-index: 1050 !important;
+    background: var(--bg-surface-2) !important;
+    border: 1px solid var(--gold-border) !important;
+    border-radius: 12px !important;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45) !important;
+}
+
+/* COMPACT SELECTED COIN CARDS (Scales down giant 240px coin images so they don't block the dropdown) */
+.config-container .card.medium-size.config-card {
+    max-width: 17rem !important;
+    min-width: 13rem !important;
+    border-radius: 12px !important;
+    margin-bottom: 1rem !important;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6) !important;
+}
+
+.config-container .card.medium-size.config-card .view.overlay {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 10px 0 6px 0 !important;
+    height: auto !important;
+}
+
+.config-container .card.medium-size.config-card .currency-image {
+    width: 62px !important;
+    height: 62px !important;
+    max-width: 62px !important;
+    max-height: 62px !important;
+    object-fit: contain !important;
+    border-radius: 50% !important;
+    background: #111116;
+    border: 2px solid var(--gold-border) !important;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.8), 0 0 10px rgba(212, 175, 55, 0.25) !important;
+    padding: 8px !important;
+    transition: transform 0.25s ease, border-color 0.25s ease;
+}
+
+.config-container .card.medium-size.config-card:hover .currency-image {
+    transform: scale(1.08);
+    border-color: var(--gold-primary) !important;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.9), 0 0 15px rgba(212, 175, 55, 0.45) !important;
+}
+
+.currency-carousel-picker {
+    position: relative !important;
+    min-width: 280px;
+    max-width: 480px;
+    z-index: 1060 !important;
+}
+
+.carousel-picker-trigger {
+    background-color: var(--bg-surface-1) !important;
+    border: 1.5px solid var(--gold-border) !important;
+    border-radius: 8px !important;
+    color: var(--text-primary) !important;
+    padding: 8px 14px !important;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+    outline: none !important;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5) !important;
+}
+
+.carousel-picker-trigger:hover,
+.carousel-picker-trigger.active {
+    border-color: var(--gold-primary) !important;
+    background-color: var(--bg-surface-3) !important;
+    box-shadow: 0 0 16px rgba(212, 175, 55, 0.35) !important;
+}
+
+.carousel-picker-trigger .carousel-arrow-icon {
+    color: var(--gold-light);
+    font-size: 13px;
+    transition: transform 0.2s ease;
+}
+
+.crypto-avatar-circle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, rgba(212, 175, 55, 0.35) 0%, rgba(14, 14, 20, 0.95) 100%);
+    border: 1.5px solid var(--gold-primary);
+    color: var(--gold-light);
+    font-size: 14px;
+    box-shadow: 0 0 8px rgba(212, 175, 55, 0.3);
+}
+
+.item-coin-avatar-mini {
+    display: inline-block;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    font-size: 10px;
+    color: var(--gold-light);
+    text-transform: uppercase;
+}
+
+/* Rolling Carousel Dropdown Panel */
+.carousel-dropdown-panel {
+    position: absolute !important;
+    top: calc(100% + 8px) !important;
+    left: 0 !important;
+    width: 100% !important;
+    min-width: 440px !important;
+    background: #0d0d14 !important;
+    border: 2px solid var(--gold-primary) !important;
+    border-radius: 12px !important;
+    box-shadow: 0 25px 80px rgba(0, 0, 0, 0.98), 0 0 45px rgba(212, 175, 55, 0.4) !important;
+    z-index: 9999999 !important;
+    overflow: hidden !important;
+}
+
+.carousel-search-box {
+    background: #14141c;
+}
+
+.carousel-search-box .input-group-text {
+    background: #1a1a24 !important;
+    border-color: rgba(212, 175, 55, 0.3) !important;
+}
+
+.carousel-search-box input.form-control {
+    background: #14141c !important;
+    border-color: rgba(212, 175, 55, 0.3) !important;
+    color: #ffffff !important;
+    font-size: 13.5px;
+}
+
+.carousel-search-box input.form-control:focus {
+    border-color: var(--gold-primary) !important;
+    box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.25) !important;
+}
+
+/* Rolling Viewport with cylindrical rolling drum aesthetic */
+.carousel-viewport-wrapper {
+    position: relative;
+    height: 330px !important;
+    max-height: 330px !important;
+    background: radial-gradient(ellipse at center, rgba(30, 26, 16, 0.5) 0%, rgba(10, 10, 14, 0.95) 100%);
+    overflow: hidden !important;
+}
+
+.carousel-fade-overlay {
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 36px;
+    pointer-events: none;
+    z-index: 5;
+}
+
+.carousel-fade-overlay.top {
+    top: 0;
+    background: linear-gradient(to bottom, rgba(14, 14, 20, 0.95) 0%, rgba(14, 14, 20, 0) 100%);
+}
+
+.carousel-fade-overlay.bottom {
+    bottom: 0;
+    background: linear-gradient(to top, rgba(14, 14, 20, 0.95) 0%, rgba(14, 14, 20, 0) 100%);
+}
+
+.carousel-scroll-viewport {
+    height: 330px !important;
+    max-height: 330px !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    padding: 12px 8px;
+    scroll-behavior: smooth;
+    display: block !important;
+}
+
+.carousel-rolling-track {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+/* Individual Rolling Item */
+.carousel-rolling-item {
+    display: flex;
+    align-items: center;
+    padding: 10px 14px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    background: rgba(255, 255, 255, 0.02);
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    position: relative;
+}
+
+.carousel-rolling-item:hover {
+    background: rgba(212, 175, 55, 0.12) !important;
+    border-color: rgba(212, 175, 55, 0.45) !important;
+    transform: translateX(4px);
+}
+
+/* PROMINENT SELECTION HIGHLIGHT - Highlight the one being selected */
+.carousel-rolling-item.selected,
+.carousel-rolling-item.active-highlight {
+    background: linear-gradient(90deg, rgba(212, 175, 55, 0.32) 0%, rgba(212, 175, 55, 0.12) 100%) !important;
+    border: 1.5px solid var(--gold-primary) !important;
+    box-shadow: 0 0 18px rgba(212, 175, 55, 0.4), inset 0 0 10px rgba(212, 175, 55, 0.15) !important;
+    transform: scale(1.015);
+}
+
+.carousel-rolling-item.selected .item-coin-name,
+.carousel-rolling-item.active-highlight .item-coin-name {
+    color: #ffffff !important;
+    text-shadow: 0 0 8px rgba(245, 215, 127, 0.6);
+}
+
+.carousel-rolling-item .item-coin-avatar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: #14130a;
+    border: 1.5px solid rgba(212, 175, 55, 0.5);
+    color: var(--gold-light);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+}
+
+.carousel-rolling-item.selected .item-coin-avatar,
+.carousel-rolling-item.active-highlight .item-coin-avatar {
+    border-color: var(--gold-primary);
+    background: linear-gradient(135deg, #3d320b 0%, #171507 100%);
+    box-shadow: 0 0 12px rgba(212, 175, 55, 0.6);
+}
+
+.badge-gold {
+    background: rgba(212, 175, 55, 0.2) !important;
+    color: var(--gold-light) !important;
+    border: 1px solid rgba(212, 175, 55, 0.5) !important;
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: 0.5px;
+}
+
+.badge-gold-sm {
+    background: rgba(212, 175, 55, 0.25) !important;
+    color: #F5D77F !important;
+    border: 1px solid rgba(212, 175, 55, 0.4) !important;
+    font-size: 10px;
+    padding: 3px 6px;
+    border-radius: 4px;
+    font-family: 'JetBrains Mono', monospace;
+}
+
+.badge-selected-pill {
+    background: #00E676 !important;
+    color: #000000 !important;
+    font-weight: 800;
+    font-size: 10px;
+    padding: 3px 8px;
+    border-radius: 12px;
+    box-shadow: 0 0 8px rgba(0, 230, 118, 0.6);
+}
+
+.carousel-rolling-item .item-selected-badge {
+    display: none !important;
+}
+
+.carousel-rolling-item.selected .item-selected-badge,
+.carousel-rolling-item.active-highlight .item-selected-badge {
+    display: inline-block !important;
+}
+
+.carousel-panel-footer {
+    background: #101018;
+}
+
+/* ==========================================================================
+   SELECT2 TRADING PAIRS VISUAL DISTINCTION ENHANCEMENT
+   ========================================================================== */
+
+/* Select2 Dropdown Height Expansion */
+.select2-container--default .select2-results > .select2-results__options {
+    max-height: 360px !important;
+    overflow-y: auto !important;
+}
+
+/* Select2 Group Headers (Spot vs Futures) */
+.select2-container--default .select2-results__group {
+    background: linear-gradient(90deg, rgba(212, 175, 55, 0.25) 0%, rgba(212, 175, 55, 0.05) 100%) !important;
+    color: var(--gold-light) !important;
+    font-family: 'Outfit', sans-serif !important;
+    font-weight: 800 !important;
+    font-size: 12px !important;
+    text-transform: uppercase !important;
+    letter-spacing: 1px !important;
+    padding: 8px 12px !important;
+    border-bottom: 1px solid rgba(212, 175, 55, 0.3) !important;
+    border-top: 1px solid rgba(212, 175, 55, 0.15) !important;
+}
+
+/* Distinct Pair Items in Dropdown */
+.select2-pair-result {
+    font-size: 13.5px;
+    font-family: 'JetBrains Mono', monospace;
+}
+
+.select2-pair-result .pair-base {
+    color: #ffffff !important;
+    font-size: 14px;
+}
+
+.select2-pair-result .pair-slash {
+    color: var(--gold-primary) !important;
+}
+
+.select2-pair-result .pair-quote {
+    color: var(--gold-light) !important;
+    font-size: 13.5px;
+}
+
+/* Highlighted item in Select2 search results */
+.select2-container--default .select2-results__option--highlighted {
+    background-color: rgba(212, 175, 55, 0.22) !important;
+    color: #ffffff !important;
+    border-left: 3px solid var(--gold-primary) !important;
+}
+
+/* Selected tag tokens on currency cards */
+.select2-container--default .select2-selection--multiple .select2-selection__choice {
+    background: #17150c !important;
+    border: 1px solid var(--gold-border) !important;
+    color: var(--gold-light) !important;
+    border-radius: 6px !important;
+    padding: 3px 8px !important;
+    font-family: 'JetBrains Mono', monospace !important;
+    font-size: 12.5px !important;
+    margin: 3px !important;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6) !important;
+}
+
+.select2-container--default .select2-selection--multiple .select2-selection__choice:hover {
+    border-color: var(--gold-primary) !important;
+    box-shadow: 0 0 10px rgba(212, 175, 55, 0.35) !important;
+}
+
+.select2-container--default .select2-selection--multiple .select2-selection__choice__remove {
+    color: #FF5252 !important;
+    font-weight: bold;
+    margin-right: 6px !important;
+    transition: color 0.15s ease;
+}
+
+.select2-container--default .select2-selection--multiple .select2-selection__choice__remove:hover {
+    color: #FF1744 !important;
+}
