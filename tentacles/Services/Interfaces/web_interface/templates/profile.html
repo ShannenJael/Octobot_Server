@@ -498,6 +498,41 @@
                             "Trader simulator", link=OCTOBOT_DOCS_URL+"/octobot-usage/simulator?utm_source=octobot&utm_medium=dk&utm_campaign=regular_open_source_content&utm_content=simulator_config",
                             footer_text="Changes in the simulated starting portfolio will reset enabled exchanges simulated portfolio history.") }}
                         </div>
+                        <div class="profile-trading-market-ai mt-4" id="profileTradingMarketAi"
+                             data-currency-url="{{ url_for('api.currency_list') }}"
+                             data-market-radar-url="{{ url_for('market_radar.scan') }}">
+                            <div class="currency-smart-section">
+                                <div class="currency-smart-heading">
+                                    <span><i class="fas fa-brain mr-1"></i> Market AI top five</span>
+                                    <small id="tradingMarketAiStatus">Loading Market AI...</small>
+                                </div>
+                                <div class="currency-prediction-grid trading-market-ai-grid" id="tradingMarketAiTopFive">
+                                    <div class="currency-empty-state">Loading Market AI...</div>
+                                </div>
+                            </div>
+                            <div class="currency-smart-section mt-3">
+                                <div class="currency-smart-heading">
+                                    <span><i class="fa-solid fa-coins mr-1"></i> All currencies</span>
+                                    <small id="tradingCurrencyCount">Loading currencies...</small>
+                                </div>
+                                <div class="currency-smart-toolbar">
+                                    <div class="currency-smart-search-shell">
+                                        <i class="fa fa-search"></i>
+                                        <input type="text" id="tradingCurrencySearch"
+                                               class="form-control form-control-sm bg-dark text-white currency-smart-search"
+                                               placeholder="Search currencies" autocomplete="off">
+                                    </div>
+                                    <button type="button" id="tradingCurrencyClear"
+                                            class="currency-smart-clear" title="Clear search" aria-label="Clear search">
+                                        <i class="fa fa-times"></i>
+                                    </button>
+                                </div>
+                                <div class="currency-suggestion-list trading-currency-list" id="tradingCurrencyList" aria-live="polite">
+                                    <div class="currency-empty-state">Loading currencies...</div>
+                                </div>
+                                <div class="currency-empty-state d-none" id="tradingCurrencyEmpty">No currencies found.</div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -600,6 +635,6 @@
 {% block additional_scripts %}
 <script src="{{ url_for('static', filename='js/common/resources_rendering.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
 <script src="{{ url_for('static', filename='js/common/exchange_accounts.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
-<script src="{{ url_for('static', filename='js/components/configuration.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
+<script src="{{ url_for('static', filename='js/components/configuration.js', u=LAST_UPDATED_STATIC_FILES ~ '-profile-market-ai') }}"></script>
 <script src="{{ url_for('static', filename='js/components/profile_management.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
 {% endblock additional_scripts %}

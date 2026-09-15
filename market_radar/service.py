@@ -26,6 +26,7 @@ class MarketRadarService:
         self.cache_seconds = max(30, int(os.getenv("MARKET_RADAR_CACHE_SECONDS", "120")))
         self._cache = None
         self._cache_at = 0.0
+        self._cache_limit = 0
         self._lock = threading.Lock()
 
     def _analyze(self, ticker: dict, btc_change: float) -> dict:
@@ -38,8 +39,15 @@ class MarketRadarService:
     def scan(self, limit: int = 12, force: bool = False) -> dict:
         now = time.time()
         with self._lock:
-            if not force and self._cache and now - self._cache_at < self.cache_seconds:
-                return self._cache
+            if (
+                not force
+                and self._cache
+                and now - self._cache_at < self.cache_seconds
+                and self._cache_limit >= limit
+            ):
+                payload = dict(self._cache)
+                payload["results"] = list(self._cache.get("results", []))[:limit]
+                return payload
         tickers = self.client.tickers()
         current_prices = {}
         for item in tickers:
@@ -78,7 +86,7 @@ class MarketRadarService:
             "errors": errors,
         }
         with self._lock:
-            self._cache, self._cache_at = payload, now
+            self._cache, self._cache_at, self._cache_limit = payload, now, limit
         return payload
 
     def detail(self, instrument: str) -> dict:
@@ -133,6 +141,7 @@ class MarketRadarService:
         with self._lock:
             self._cache = None
             self._cache_at = 0.0
+            self._cache_limit = 0
         return result
 
     def get_model_status(self) -> dict:

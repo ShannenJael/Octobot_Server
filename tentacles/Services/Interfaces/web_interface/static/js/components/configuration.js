@@ -776,6 +776,270 @@ function enhanceTradingPairSelects() {
     });
 }
 
+function tradingCurrencyEscape(value) {
+    return String(value === undefined || value === null ? "" : value).replace(/[&<>'"]/g, function (character) {
+        return {
+            "&": "&amp;",
+            "<": "&lt;",
+            ">": "&gt;",
+            "'": "&#39;",
+            "\"": "&quot;"
+        }[character];
+    });
+}
+
+function tradingCurrencyNumber(value, digits) {
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed)) {
+        return "0";
+    }
+    return parsed.toLocaleString(undefined, {maximumFractionDigits: digits});
+}
+
+function getTradingCurrencySymbol(details) {
+    return String(details.s || details.symbol || "").toUpperCase();
+}
+
+function getTradingConfiguredCurrencyIds() {
+    const configured = new Set();
+    $("#panelCurrency .currency-image").each(function () {
+        const currencyId = String($(this).attr("data-currency-id") || $(this).data("currency-id") || "").toLowerCase();
+        if (currencyId) {
+            configured.add(currencyId);
+        }
+    });
+    return configured;
+}
+
+function findTradingCurrencyById(currencyId) {
+    const target = String(currencyId || "");
+    return currencyDetailsById[target] || profileTradingCurrencies.find((item) => String(item.i || "") === target);
+}
+
+function findTradingCurrencyBySymbol(symbol) {
+    const target = String(symbol || "").replace("_USDT", "").replace("/USDT", "").toUpperCase();
+    return profileTradingCurrencies.find((item) => {
+        return getTradingCurrencySymbol(item) === target || String(item.i || "").toUpperCase() === target;
+    });
+}
+
+function ensureTradingCurrencyOption(details) {
+    if (!details || !details.i) {
+        return;
+    }
+    const currencyId = String(details.i);
+    currencyDetailsById[currencyId] = details;
+    const addCurrencySelect = $("#AddCurrencySelect");
+    if (!addCurrencySelect.length) {
+        return;
+    }
+    const hasOption = addCurrencySelect.find("option").filter(function () {
+        return this.value === currencyId;
+    }).length > 0;
+    if (!hasOption) {
+        addCurrencySelect.append(new Option(`${details.n} - ${details.s}`, currencyId, false, false));
+    }
+}
+
+function selectTradingCurrencyForAdd(currencyId) {
+    const details = findTradingCurrencyById(currencyId);
+    if (!details) {
+        return false;
+    }
+    ensureTradingCurrencyOption(details);
+    const normalizedId = String(details.i);
+    const addCurrencySelect = $("#AddCurrencySelect");
+    addCurrencySelect.val(normalizedId).trigger("change");
+
+    const carouselItem = $("#currencyCarouselPicker .carousel-rolling-item").filter(function () {
+        return String($(this).attr("data-currency-id") || $(this).data("currency-id") || "") === normalizedId;
+    });
+    if (carouselItem.length) {
+        carouselItem.trigger("click");
+    }
+    return true;
+}
+
+function updateTradingCurrencyConfiguredStates() {
+    const configured = getTradingConfiguredCurrencyIds();
+    $(".trading-currency-action").each(function () {
+        const item = $(this);
+        const currencyId = String(item.attr("data-currency-id") || item.data("currency-id") || "").toLowerCase();
+        const isConfigured = configured.has(currencyId);
+        item.toggleClass("is-configured", isConfigured);
+        item.find(".currency-smart-badge-action").text(isConfigured ? "Active" : "Add");
+    });
+}
+
+function addTradingCurrency(currencyId) {
+    const details = findTradingCurrencyById(currencyId);
+    if (!details) {
+        return;
+    }
+    const normalizedId = String(details.i);
+    const configured = getTradingConfiguredCurrencyIds();
+    const symbol = getTradingCurrencySymbol(details);
+    if (configured.has(normalizedId.toLowerCase())) {
+        create_alert("info", "Currency already active", `${symbol || details.n} is already configured.`);
+        updateTradingCurrencyConfiguredStates();
+        return;
+    }
+    if (!selectTradingCurrencyForAdd(normalizedId)) {
+        return;
+    }
+    $("#AddCurrency").trigger("click");
+    setTimeout(function () {
+        updateTradingCurrencyConfiguredStates();
+        enhanceTradingPairSelects();
+    }, 150);
+    create_alert("success", "Currency added", `${symbol || details.n} added to profile currencies.`);
+}
+
+function renderTradingMarketAiTopFive(scanData) {
+    const topFiveContainer = $("#tradingMarketAiTopFive");
+    const status = $("#tradingMarketAiStatus");
+    if (!topFiveContainer.length) {
+        return;
+    }
+    const results = Array.isArray(scanData && scanData.results) ? scanData.results.slice(0, 5) : [];
+    if (!results.length) {
+        topFiveContainer.html('<div class="currency-empty-state">Market AI is unavailable.</div>');
+        status.text("Unavailable");
+        return;
+    }
+
+    const configured = getTradingConfiguredCurrencyIds();
+    const cards = results.map((item, index) => {
+        const baseSymbol = String(item.instrument || item.symbol || "").split("_")[0].split("/")[0].toUpperCase();
+        const details = findTradingCurrencyBySymbol(baseSymbol);
+        const currencyId = details ? String(details.i) : "";
+        const displaySymbol = details ? getTradingCurrencySymbol(details) : baseSymbol;
+        const displayName = details ? details.n : baseSymbol;
+        const change = Number(item.change_24h || 0);
+        const changeClass = change >= 0 ? "currency-smart-badge-up" : "currency-smart-badge-down";
+        const isConfigured = currencyId && configured.has(currencyId.toLowerCase());
+        return `
+            <button type="button" class="currency-prediction-card trading-currency-action"
+                    data-currency-id="${tradingCurrencyEscape(currencyId)}" ${currencyId ? "" : "disabled"}>
+                <span class="currency-prediction-rank">#${index + 1}</span>
+                <span class="currency-prediction-main">
+                    <strong>${tradingCurrencyEscape(displayName)}</strong>
+                    <small>${tradingCurrencyEscape(displaySymbol)} / USDT</small>
+                </span>
+                <span class="currency-prediction-metrics">
+                    <span class="currency-smart-badge currency-smart-badge-score">${tradingCurrencyNumber(item.score, 1)}/100</span>
+                    <span class="currency-smart-badge currency-smart-badge-hot">${tradingCurrencyEscape(item.rating || "ranked")}</span>
+                    <span class="currency-smart-badge ${changeClass}">${change >= 0 ? "+" : ""}${tradingCurrencyNumber(change, 2)}%</span>
+                    <span class="currency-smart-badge currency-smart-badge-action">${isConfigured ? "Active" : "Add"}</span>
+                </span>
+            </button>
+        `;
+    });
+    topFiveContainer.html(cards.join(""));
+    if (scanData.generated_at) {
+        status.text(`Updated ${new Date(scanData.generated_at * 1000).toLocaleTimeString()}`);
+    } else {
+        status.text(`Showing ${results.length}`);
+    }
+    updateTradingCurrencyConfiguredStates();
+}
+
+function loadTradingMarketAiTopFive() {
+    const root = $("#profileTradingMarketAi");
+    if (!root.length) {
+        return;
+    }
+    const radarUrl = root.data("market-radar-url");
+    if (!radarUrl) {
+        $("#tradingMarketAiStatus").text("Unavailable");
+        return;
+    }
+    $.get({
+        url: radarUrl,
+        data: {limit: 20, force: false},
+        dataType: "json",
+        success: function (data) {
+            renderTradingMarketAiTopFive(data);
+        },
+        error: function (result) {
+            const message = (result.responseJSON && result.responseJSON.error) || "Market AI is unavailable.";
+            $("#tradingMarketAiTopFive").html(`<div class="currency-empty-state">${tradingCurrencyEscape(message)}</div>`);
+            $("#tradingMarketAiStatus").text("Unavailable");
+        }
+    });
+}
+
+function renderTradingCurrencyList(searchValue) {
+    const root = $("#profileTradingMarketAi");
+    if (!root.length) {
+        return;
+    }
+    const query = String(searchValue || "").trim().toLowerCase();
+    const configured = getTradingConfiguredCurrencyIds();
+    const filtered = profileTradingCurrencies.filter((item) => {
+        const symbol = getTradingCurrencySymbol(item).toLowerCase();
+        const name = String(item.n || "").toLowerCase();
+        const id = String(item.i || "").toLowerCase();
+        return !query || symbol.includes(query) || name.includes(query) || id.includes(query);
+    });
+
+    $("#tradingCurrencyCount").text(
+        query ? `${filtered.length} of ${profileTradingCurrencies.length} currencies` : `${profileTradingCurrencies.length} currencies`
+    );
+
+    const list = $("#tradingCurrencyList");
+    const empty = $("#tradingCurrencyEmpty");
+    if (!filtered.length) {
+        list.empty();
+        empty.removeClass("d-none");
+        return;
+    }
+    empty.addClass("d-none");
+    list.html(filtered.map((item) => {
+        const currencyId = String(item.i || "");
+        const symbol = getTradingCurrencySymbol(item);
+        const name = item.n || currencyId;
+        const isConfigured = configured.has(currencyId.toLowerCase());
+        return `
+            <button type="button" class="currency-suggestion-item trading-currency-action"
+                    data-currency-id="${tradingCurrencyEscape(currencyId)}">
+                <span class="currency-symbol-mark">${tradingCurrencyEscape(symbol.substring(0, 6) || "COIN")}</span>
+                <span class="currency-suggestion-copy">
+                    <strong>${tradingCurrencyEscape(name)}</strong>
+                    <small>${tradingCurrencyEscape(symbol)} / USDT, BTC, USD</small>
+                </span>
+                <span class="currency-smart-badge currency-smart-badge-action">${isConfigured ? "Active" : "Add"}</span>
+            </button>
+        `;
+    }).join(""));
+}
+
+function initTradingCurrencyPanel(currenciesData) {
+    const root = $("#profileTradingMarketAi");
+    if (!root.length || !Array.isArray(currenciesData)) {
+        return;
+    }
+    profileTradingCurrencies = currenciesData.slice();
+    renderTradingCurrencyList("");
+    loadTradingMarketAiTopFive();
+
+    $("#tradingCurrencySearch").off("input.tradingCurrencies").on("input.tradingCurrencies", function () {
+        renderTradingCurrencyList($(this).val());
+    });
+    $("#tradingCurrencyClear").off("click.tradingCurrencies").on("click.tradingCurrencies", function () {
+        $("#tradingCurrencySearch").val("").trigger("input");
+    });
+    $(document).off("click.tradingCurrencyAction", ".trading-currency-action")
+        .on("click.tradingCurrencyAction", ".trading-currency-action", function (event) {
+            event.preventDefault();
+            addTradingCurrency($(this).attr("data-currency-id") || $(this).data("currency-id"));
+        });
+    $(document).off("click.tradingCurrencySync", "#AddCurrency, #panelCurrency .remove-btn")
+        .on("click.tradingCurrencySync", "#AddCurrency, #panelCurrency .remove-btn", function () {
+            setTimeout(updateTradingCurrencyConfiguredStates, 200);
+        });
+}
+
 function initCurrencyCarousel(currenciesData) {
     const $picker = $("#currencyCarouselPicker");
     if (!$picker.length) return;
@@ -998,10 +1262,12 @@ function fetch_currencies(){
         success: function (data) {
             const addCurrencySelect = $("#AddCurrencySelect");
             const options = [];
-            data.slice(0, maxDisplayedOptions).forEach((element) => {
+            data.forEach((element) => {
                 if(!currencyDetailsById.hasOwnProperty(element.i)){
                     currencyDetailsById[element.i] = element
                 }
+            });
+            data.slice(0, maxDisplayedOptions).forEach((element) => {
                 options.push(getCurrencyOption(addCurrencySelect, element))
             });
             addCurrencySelect.append(...options);
@@ -1013,6 +1279,7 @@ function fetch_currencies(){
                 addCurrencySelect.addClass("selectpicker")
                 addCurrencySelect.selectpicker('render');
             }
+            initTradingCurrencyPanel(data);
         },
         error: function (result, status) {
             window.console && console.error(`Impossible to get currency list: ${result.responseText} (${status})`);
@@ -1023,6 +1290,7 @@ function fetch_currencies(){
 let validated_updated_global_config = {};
 let deleted_global_config_elements = [];
 let currencyDetailsById = {}
+let profileTradingCurrencies = [];
 
 const traderSimulatorCheckbox = $("#trader-simulator_enabled");
 const traderCheckbox = $("#trader_enabled");

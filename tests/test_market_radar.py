@@ -65,6 +65,50 @@ class JournalTests(unittest.TestCase):
 
 
 class ServiceStudioTests(unittest.TestCase):
+    def test_scan_cache_refreshes_when_requesting_more_results(self):
+        class FakeClient:
+            def __init__(self):
+                self.ticker_calls = 0
+                self.assets = ["BTC", "ETH", "SOL", "XRP", "ADA", "CRO"]
+
+            def tickers(self):
+                self.ticker_calls += 1
+                return [
+                    {
+                        "i": f"{asset}_USDT",
+                        "a": "100",
+                        "b": "99.9",
+                        "k": "100.1",
+                        "c": "0.01",
+                        "vv": str(10_000_000 - index * 100_000),
+                    }
+                    for index, asset in enumerate(self.assets)
+                ]
+
+            def candles(self, instrument, timeframe, count):
+                return candles(start=100 + len(instrument), growth=0.001, count=count)
+
+        with tempfile.TemporaryDirectory() as directory:
+            os.environ["MARKET_RADAR_DATA_DIR"] = directory
+            try:
+                from market_radar.service import MarketRadarService
+
+                service = MarketRadarService()
+                fake_client = FakeClient()
+                service.client = fake_client
+                service.sentiment.get_market_sentiment_summary = lambda *args, **kwargs: {}
+
+                small_scan = service.scan(limit=3)
+                wider_scan = service.scan(limit=5)
+                narrow_cached_scan = service.scan(limit=3)
+
+                self.assertEqual(len(small_scan["results"]), 3)
+                self.assertEqual(len(wider_scan["results"]), 5)
+                self.assertEqual(len(narrow_cached_scan["results"]), 3)
+                self.assertEqual(fake_client.ticker_calls, 2)
+            finally:
+                os.environ.pop("MARKET_RADAR_DATA_DIR", None)
+
     def test_service_train_and_status(self):
         with tempfile.TemporaryDirectory() as directory:
             os.environ["MARKET_RADAR_DATA_DIR"] = directory

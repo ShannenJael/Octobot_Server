@@ -596,6 +596,334 @@ input:focus, select:focus, textarea:focus, .form-control:focus {
     color: var(--gold-light) !important;
 }
 
+.currency-smart-native-select {
+    display: none !important;
+}
+
+.currency-smart-picker {
+    display: grid;
+    gap: 16px;
+    margin: 12px 0 18px;
+    width: 100%;
+    max-width: 980px;
+}
+
+.currency-smart-toolbar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 42px;
+    gap: 10px;
+    max-width: 680px;
+}
+
+.currency-smart-search-shell {
+    align-items: center;
+    background: var(--bg-surface-2);
+    border: 1px solid var(--gold-border);
+    border-radius: 8px;
+    display: grid;
+    grid-template-columns: 42px minmax(0, 1fr);
+    min-height: 42px;
+}
+
+.currency-smart-search-shell i {
+    color: var(--gold-light);
+    text-align: center;
+}
+
+.currency-smart-search {
+    background: transparent !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    height: 40px;
+    min-width: 0;
+    padding: 0 12px 0 0 !important;
+}
+
+.currency-smart-clear {
+    align-items: center;
+    background: var(--bg-surface-2);
+    border: 1px solid var(--gold-border);
+    border-radius: 8px;
+    color: var(--gold-light);
+    display: inline-flex;
+    height: 42px;
+    justify-content: center;
+    width: 42px;
+}
+
+.currency-smart-clear:hover,
+.currency-prediction-card:hover,
+.currency-suggestion-item:hover {
+    border-color: var(--gold-primary);
+    box-shadow: 0 0 18px rgba(212, 175, 55, 0.18);
+}
+
+.currency-smart-section {
+    display: grid;
+    gap: 10px;
+}
+
+.currency-smart-heading {
+    align-items: center;
+    display: flex;
+    gap: 8px;
+    justify-content: space-between;
+    max-width: 680px;
+}
+
+.currency-smart-heading span:first-child {
+    color: var(--gold-light);
+    font-family: 'Outfit', 'Plus Jakarta Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 800;
+    letter-spacing: 0;
+}
+
+.currency-prediction-grid {
+    display: grid;
+    gap: 10px;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    max-width: 980px;
+}
+
+.currency-prediction-card,
+.currency-suggestion-item {
+    background: linear-gradient(135deg, rgba(22, 22, 31, 0.98), rgba(16, 16, 21, 0.98));
+    border: 1px solid var(--gold-border);
+    border-radius: 8px;
+    color: var(--text-primary);
+    cursor: pointer;
+    letter-spacing: 0;
+    text-align: left;
+    transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+}
+
+.currency-prediction-card {
+    display: grid;
+    gap: 8px;
+    grid-template-columns: auto minmax(0, 1fr);
+    min-height: 112px;
+    padding: 12px;
+}
+
+.currency-prediction-card:hover,
+.currency-suggestion-item:hover {
+    transform: translateY(-1px);
+}
+
+.currency-prediction-card:disabled,
+.currency-suggestion-item:disabled {
+    cursor: default;
+    opacity: 0.72;
+    transform: none;
+}
+
+.currency-prediction-rank {
+    align-items: center;
+    background: rgba(212, 175, 55, 0.14);
+    border: 1px solid var(--gold-border);
+    border-radius: 8px;
+    color: var(--gold-light);
+    display: inline-flex;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    font-weight: 800;
+    height: 34px;
+    justify-content: center;
+    width: 42px;
+}
+
+.currency-prediction-main {
+    display: grid;
+    gap: 2px;
+    min-width: 0;
+}
+
+.currency-prediction-main strong,
+.currency-suggestion-copy strong {
+    color: var(--text-primary);
+    font-family: 'Outfit', 'Plus Jakarta Sans', sans-serif;
+    font-size: 16px;
+    font-weight: 800;
+    letter-spacing: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.currency-prediction-main small,
+.currency-suggestion-copy small {
+    color: var(--text-muted) !important;
+    font-size: 12px;
+    letter-spacing: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.currency-prediction-metrics {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    grid-column: 1 / -1;
+}
+
+.currency-smart-badge {
+    align-items: center;
+    background: rgba(212, 175, 55, 0.12);
+    border: 1px solid var(--gold-border);
+    border-radius: 6px;
+    color: var(--gold-light);
+    display: inline-flex;
+    font-size: 11px;
+    font-weight: 800;
+    justify-content: center;
+    letter-spacing: 0;
+    min-height: 24px;
+    padding: 3px 8px;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.currency-smart-badge-score,
+.currency-smart-badge-hot {
+    background: rgba(212, 175, 55, 0.18);
+}
+
+.currency-smart-badge-up {
+    background: var(--color-go-bg);
+    border-color: var(--color-go-border);
+    color: var(--color-go);
+}
+
+.currency-smart-badge-down {
+    background: var(--color-warning-bg);
+    border-color: var(--color-warning-border);
+    color: #FFA4AD;
+}
+
+.currency-suggestion-list {
+    display: grid;
+    gap: 8px;
+    max-width: 680px;
+}
+
+.currency-suggestion-item {
+    align-items: center;
+    display: grid;
+    gap: 12px;
+    grid-template-columns: 54px minmax(0, 1fr) auto;
+    min-height: 62px;
+    padding: 10px 12px;
+}
+
+.currency-symbol-mark {
+    align-items: center;
+    background: var(--gold-gradient);
+    border-radius: 8px;
+    color: #070709;
+    display: inline-flex;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    font-weight: 900;
+    height: 38px;
+    justify-content: center;
+    min-width: 46px;
+    padding: 0 6px;
+}
+
+.currency-suggestion-copy {
+    display: grid;
+    gap: 2px;
+    min-width: 0;
+}
+
+.currency-empty-state {
+    background: rgba(212, 175, 55, 0.08);
+    border: 1px dashed var(--gold-border);
+    border-radius: 8px;
+    color: var(--text-muted);
+    font-size: 13px;
+    letter-spacing: 0;
+    max-width: 680px;
+    padding: 14px;
+}
+
+@media (max-width: 640px) {
+    .currency-smart-toolbar,
+    .currency-suggestion-list,
+    .currency-smart-heading,
+    .currency-empty-state {
+        max-width: 100%;
+    }
+
+    .currency-prediction-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .currency-suggestion-item {
+        grid-template-columns: 48px minmax(0, 1fr);
+    }
+
+    .currency-suggestion-item .currency-smart-badge {
+        grid-column: 1 / -1;
+        justify-self: start;
+    }
+}
+
+.profile-trading-market-ai {
+    border-top: 1px solid var(--gold-border);
+    display: grid;
+    gap: 14px;
+    padding-top: 18px;
+}
+
+.profile-trading-market-ai .currency-smart-heading,
+.profile-trading-market-ai .currency-smart-toolbar,
+.profile-trading-market-ai .currency-prediction-grid,
+.profile-trading-market-ai .currency-suggestion-list,
+.profile-trading-market-ai .currency-empty-state {
+    max-width: none;
+}
+
+.profile-trading-market-ai .currency-smart-heading small {
+    color: var(--text-muted);
+    font-size: 12px;
+}
+
+.profile-trading-market-ai .trading-market-ai-grid {
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+}
+
+.profile-trading-market-ai .trading-currency-list {
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    max-height: 360px;
+    overflow-y: auto;
+    padding-right: 6px;
+}
+
+.profile-trading-market-ai .currency-suggestion-item,
+.profile-trading-market-ai .currency-prediction-card {
+    min-width: 0;
+}
+
+.profile-trading-market-ai .trading-currency-action.is-configured {
+    border-color: var(--color-go-border);
+}
+
+.profile-trading-market-ai .trading-currency-action.is-configured .currency-smart-badge-action {
+    background: var(--color-go-bg);
+    border-color: var(--color-go-border);
+    color: var(--color-go);
+}
+
+@media (max-width: 640px) {
+    .profile-trading-market-ai .trading-currency-list,
+    .profile-trading-market-ai .trading-market-ai-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
 /* ==========================================================================
    MODALS
    ========================================================================== */
