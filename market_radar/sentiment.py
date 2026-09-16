@@ -34,7 +34,7 @@ ASSET_ALIASES: dict[str, set[str]] = {
     "ETH": {"eth", "ethereum", "ether"},
     "SOL": {"sol", "solana"},
     "CRO": {"cro", "cronos", "crypto.com"},
-    "BNB": {"bnb", "binance"},
+    "BNB": {"bnb", "buildnbuild"},
     "XRP": {"xrp", "ripple"},
     "ADA": {"ada", "cardano"},
     "DOGE": {"doge", "dogecoin"},
