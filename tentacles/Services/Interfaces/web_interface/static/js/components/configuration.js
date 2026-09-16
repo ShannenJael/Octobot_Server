@@ -176,20 +176,35 @@ function handleCardDecksAddButtons(){
             $(editable_selector).each(function () {
                 if (
                     $(this).siblings('.select2').length === 0
-                    && !$(this).parent().hasClass('default')
+                    && !$(this).parents('.default').length
                 ){
+                    let defaultPairsToSelect = [];
+                    const reference_market = (select_input.attr("reference_market") || "USDT").toUpperCase();
                     $(this).find("option").each(function () {
                         const option = $(this);
-                        const symbols = option.attr("value").split("/");
-                        const reference_market = select_input.attr("reference_market").toUpperCase();
+                        const val = (option.attr("value") || "").trim();
+                        const symbols = val.split("/");
                         if (symbols[0] === select_symbol && symbols[1] === reference_market){
                             option.attr("selected", "selected");
+                            option.prop("selected", true);
+                            defaultPairsToSelect.push(val);
                         }
                         // remove options without this currency symbol
                         if (!(symbols[0] === select_symbol || symbols[1] === select_symbol)){
                             option.detach();
                         }
                     });
+                    if (defaultPairsToSelect.length > 0) {
+                        $(this).val(defaultPairsToSelect);
+                    } else {
+                        // Fallback: select first remaining available pair for this currency
+                        const firstOpt = $(this).find("option:first");
+                        if (firstOpt.length && firstOpt.val()) {
+                            firstOpt.attr("selected", "selected");
+                            firstOpt.prop("selected", true);
+                            $(this).val([firstOpt.val()]);
+                        }
+                    }
                 }
             });
 
@@ -205,15 +220,19 @@ function handleCardDecksAddButtons(){
             $(editable_selector).each(function () {
                 if (
                     $(this).siblings('.select2').length === 0
-                    && !$(this).parent().hasClass('default')
+                    && !$(this).parents('.default').length
                 ) {
-                    $(this).select2({
-                        width: 'resolve', // need to override the changed default
-                        tags: true,
-                        placeholder: placeholder,
-                        templateResult: typeof formatTradingPairResult === 'function' ? formatTradingPairResult : undefined,
-                        templateSelection: typeof formatTradingPairSelection === 'function' ? formatTradingPairSelection : undefined
-                    });
+                    try {
+                        $(this).select2({
+                            width: '100%',
+                            tags: true,
+                            placeholder: placeholder,
+                            templateResult: typeof formatTradingPairResult === 'function' ? formatTradingPairResult : undefined,
+                            templateSelection: typeof formatTradingPairSelection === 'function' ? formatTradingPairSelection : undefined
+                        });
+                    } catch (e) {
+                        window.console && console.warn("Select2 error on " + editable_selector, e);
+                    }
                 }
             });
 
@@ -746,32 +765,29 @@ function formatTradingPairResult(item) {
 
 function formatTradingPairSelection(item) {
     if (!item.id) return item.text;
-    const text = (item.text || "").trim();
-    if (text.indexOf('/') !== -1) {
-        const parts = text.split('/');
-        return $(`
-            <span class="select2-pair-chosen">
-                <strong class="text-white font-weight-bold">${parts[0].trim()}</strong><span class="mx-1" style="color: #D4AF37;">/</span><span style="color: #F5D77F; font-weight: 600;">${parts.slice(1).join('/').trim()}</span>
-            </span>
-        `);
-    }
-    return item.text;
+    return (item.text || "").trim();
 }
 
 function enhanceTradingPairSelects() {
     $("select.multi-select-element").each(function () {
-        const configKey = $(this).attr("config-key") || "";
+        const $select = $(this);
+        const configKey = $select.attr("config-key") || "";
         if (configKey.startsWith("crypto-currencies_")) {
-            if ($(this).hasClass("select2-hidden-accessible")) {
-                $(this).select2('destroy');
+            try {
+                if ($select.hasClass("select2-hidden-accessible")) {
+                    $select.select2('destroy');
+                }
+                $select.select2({
+                    width: '100%',
+                    dropdownAutoWidth: false,
+                    tags: true,
+                    placeholder: "Select trading pair(s)",
+                    templateResult: formatTradingPairResult,
+                    templateSelection: formatTradingPairSelection
+                });
+            } catch (e) {
+                window.console && console.warn("Select2 error for " + configKey, e);
             }
-            $(this).select2({
-                dropdownAutoWidth: true,
-                tags: true,
-                placeholder: "Select trading pair(s)",
-                templateResult: formatTradingPairResult,
-                templateSelection: formatTradingPairSelection
-            });
         }
     });
 }
