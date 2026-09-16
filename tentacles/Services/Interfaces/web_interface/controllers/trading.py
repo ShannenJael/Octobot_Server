@@ -71,6 +71,13 @@ def register(blueprint):
         )
 
 
+    @blueprint.route("/seconds-trading")
+    @login.login_required_when_activated
+    def seconds_trading():
+        """Display the short-interval strategy guide and configuration shortcuts."""
+        return flask.render_template('seconds_trading.html')
+
+
     @blueprint.route("/trading_type_selector")
     @login.login_required_when_activated
     def trading_type_selector():

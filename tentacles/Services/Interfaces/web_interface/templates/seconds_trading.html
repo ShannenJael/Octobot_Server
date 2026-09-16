@@ -1,0 +1,169 @@
+{% extends "layout.html" %}
+{% set active_page = "seconds_trading" %}
+{% set page_title = "Seconds Trading" %}
+
+{% block additional_style %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/components/seconds_trading.css', u=LAST_UPDATED_STATIC_FILES) }}">
+{% endblock additional_style %}
+
+{% block body %}
+<main class="seconds-page mx-auto">
+    <section class="seconds-hero">
+        <div class="seconds-hero-copy">
+            <span class="seconds-eyebrow"><i class="fas fa-bolt"></i> Short-interval strategy desk</span>
+            <h1>Trade the moments<br><span>between minutes.</span></h1>
+            <p>Choose the execution model that matches your signal source. Compare true chart intervals, order-book refresh rates, and native OctoBot analysis before you configure a strategy.</p>
+            <div class="seconds-hero-actions">
+                <a href="#strategy-chooser" class="btn seconds-btn-primary">Compare strategies <i class="fas fa-arrow-down"></i></a>
+                <a href="{{ url_for('profile') }}" class="btn seconds-btn-ghost">Open Profile</a>
+            </div>
+        </div>
+        <div class="seconds-pulse" aria-label="Supported intervals: 30 seconds, 1 minute, and 5 minutes">
+            <div class="pulse-orbit pulse-orbit-outer"></div>
+            <div class="pulse-orbit pulse-orbit-inner"></div>
+            <div class="pulse-core">
+                <span>EXECUTION</span>
+                <strong>&lt; 1s</strong>
+                <small>after signal</small>
+            </div>
+            <span class="pulse-time pulse-30">30s</span>
+            <span class="pulse-time pulse-1">1m</span>
+            <span class="pulse-time pulse-5">5m</span>
+        </div>
+    </section>
+
+    <section class="seconds-notice" role="note">
+        <i class="fas fa-circle-info"></i>
+        <p><strong>Know the difference:</strong> standard exchange candle APIs typically begin at 1 minute. A 30-second <em>chart signal</em> requires an external source such as TradingView, while a 30-second <em>order refresh</em> can run directly from the live order book.</p>
+    </section>
+
+    <section id="strategy-chooser" class="strategy-section">
+        <div class="seconds-heading-row">
+            <div>
+                <span class="seconds-section-label">01 / SELECT A WORKFLOW</span>
+                <h2>Three ways to trade fast</h2>
+            </div>
+            <div class="interval-legend" aria-label="Interval legend">
+                <span><b class="dot dot-native"></b> Native</span>
+                <span><b class="dot dot-external"></b> External signal</span>
+                <span><b class="dot dot-none"></b> Not available</span>
+            </div>
+        </div>
+
+        <div class="strategy-grid">
+            <article class="strategy-card strategy-card-featured" data-strategy-card>
+                <div class="strategy-rank">01</div>
+                <div class="strategy-card-top">
+                    <span class="strategy-icon"><i class="fas fa-satellite-dish"></i></span>
+                    <span class="strategy-badge">Best for 30s charts</span>
+                </div>
+                <p class="strategy-type">WEBHOOK SIGNALS</p>
+                <h3>TradingView Signals</h3>
+                <code>TradingViewSignalsTradingMode</code>
+                <p class="strategy-summary">Run custom indicators on TradingView and send alerts to OctoBot for immediate exchange execution.</p>
+                <div class="interval-row">
+                    <span class="external">30s <small>TV</small></span>
+                    <span class="external">1m <small>TV</small></span>
+                    <span class="external">5m <small>TV</small></span>
+                </div>
+                <button class="strategy-details" type="button" data-strategy-toggle aria-expanded="true" aria-controls="strategy-tv">
+                    Setup details <i class="fas fa-chevron-down"></i>
+                </button>
+                <div class="strategy-panel" id="strategy-tv">
+                    <ol>
+                        <li><span>1</span><p>Open <a href="{{ url_for('profiles_selector') }}">Profiles</a> and choose the TradingView Signals profile.</p></li>
+                        <li><span>2</span><p>Open <a href="{{ url_for('trading') }}">Trading</a> and copy the webhook endpoint and token.</p></li>
+                        <li><span>3</span><p>Add the endpoint to each 30s, 1m, and 5m TradingView alert.</p></li>
+                    </ol>
+                    <div class="strategy-config"><span>Endpoint</span><code>/webhook</code></div>
+                </div>
+            </article>
+
+            <article class="strategy-card" data-strategy-card>
+                <div class="strategy-rank">02</div>
+                <div class="strategy-card-top">
+                    <span class="strategy-icon"><i class="fas fa-layer-group"></i></span>
+                    <span class="strategy-badge">Native order book</span>
+                </div>
+                <p class="strategy-type">MICRO-SPREAD QUOTING</p>
+                <h3>Simple Market Making</h3>
+                <code>SimpleMarketMakingTradingMode</code>
+                <p class="strategy-summary">Refresh bids and asks on an exact timer, using the live order book instead of waiting for candle closes.</p>
+                <div class="interval-row">
+                    <span class="native">30s <small>timer</small></span>
+                    <span class="native">1m <small>timer</small></span>
+                    <span class="none">5m <small>not needed</small></span>
+                </div>
+                <button class="strategy-details" type="button" data-strategy-toggle aria-expanded="false" aria-controls="strategy-mm">
+                    Setup details <i class="fas fa-chevron-down"></i>
+                </button>
+                <div class="strategy-panel" id="strategy-mm" hidden>
+                    <ol>
+                        <li><span>1</span><p>Open <a href="{{ url_for('profile') }}">Profile → Strategies</a> and activate Simple Market Making.</p></li>
+                        <li><span>2</span><p>Start in simulated trading and verify fills, fees, and inventory drift.</p></li>
+                    </ol>
+                    <div class="config-grid">
+                        <div><span>min_interval_seconds</span><strong>30</strong></div>
+                        <div><span>max_interval_seconds</span><strong>30</strong></div>
+                        <div><span>order_book_depth</span><strong>2–3</strong></div>
+                        <div><span>max_spread</span><strong>0.5%</strong></div>
+                    </div>
+                </div>
+            </article>
+
+            <article class="strategy-card" data-strategy-card>
+                <div class="strategy-rank">03</div>
+                <div class="strategy-card-top">
+                    <span class="strategy-icon"><i class="fas fa-chart-line"></i></span>
+                    <span class="strategy-badge">Native indicators</span>
+                </div>
+                <p class="strategy-type">MULTI-TIMEFRAME TA</p>
+                <h3>Daily / Signal Trading</h3>
+                <code>DailyTradingMode · SignalTradingMode</code>
+                <p class="strategy-summary">Use the 1-minute candle as the fast trigger and the 5-minute trend as confirmation to reduce false breakouts.</p>
+                <div class="interval-row">
+                    <span class="none">30s <small>feed only</small></span>
+                    <span class="native">1m <small>native</small></span>
+                    <span class="native">5m <small>native</small></span>
+                </div>
+                <button class="strategy-details" type="button" data-strategy-toggle aria-expanded="false" aria-controls="strategy-ta">
+                    Setup details <i class="fas fa-chevron-down"></i>
+                </button>
+                <div class="strategy-panel" id="strategy-ta" hidden>
+                    <ol>
+                        <li><span>1</span><p>Activate Daily Trading or Signal Trading under <a href="{{ url_for('profile') }}">Profile → Strategies</a>.</p></li>
+                        <li><span>2</span><p>Select RSI, EMA Momentum, and Instant Fluctuations evaluators.</p></li>
+                        <li><span>3</span><p>Enable the 1m and 5m timeframes for fast-trigger / trend-filter confirmation.</p></li>
+                    </ol>
+                    <div class="evaluator-tags"><span>RSI</span><span>EMA Momentum</span><span>Instant Fluctuations</span></div>
+                </div>
+            </article>
+        </div>
+    </section>
+
+    <section class="decision-section">
+        <span class="seconds-section-label">02 / QUICK DECISION</span>
+        <div class="decision-layout">
+            <div>
+                <h2>Pick by intent,<br>not by speed alone.</h2>
+                <p>The shortest interval is not automatically the best signal. Match the data source to the behavior you want.</p>
+            </div>
+            <div class="decision-list">
+                <a href="#strategy-chooser" data-focus-strategy="0"><span>01</span><p><strong>Custom chart indicators</strong><small>Use TradingView Signals for true 30s, 1m, and 5m charts.</small></p><i class="fas fa-arrow-right"></i></a>
+                <a href="#strategy-chooser" data-focus-strategy="1"><span>02</span><p><strong>Refresh orders every 30 seconds</strong><small>Use Simple Market Making for timed order-book quoting.</small></p><i class="fas fa-arrow-right"></i></a>
+                <a href="#strategy-chooser" data-focus-strategy="2"><span>03</span><p><strong>Keep analysis inside OctoBot</strong><small>Use Daily / Signal Trading with native 1m + 5m confirmation.</small></p><i class="fas fa-arrow-right"></i></a>
+            </div>
+        </div>
+    </section>
+
+    <section class="seconds-risk">
+        <i class="fas fa-shield-halved"></i>
+        <div><h2>Speed magnifies execution costs.</h2><p>Test in simulated trading first. Account for exchange fees, spread, slippage, rate limits, minimum order size, and inventory risk before switching to real funds.</p></div>
+        <a href="{{ url_for('trading_type_selector') }}" class="btn seconds-btn-ghost">Trading setup <i class="fas fa-arrow-right"></i></a>
+    </section>
+</main>
+{% endblock %}
+
+{% block additional_scripts %}
+<script src="{{ url_for('static', filename='js/components/seconds_trading.js', u=LAST_UPDATED_STATIC_FILES) }}"></script>
+{% endblock additional_scripts %}

@@ -1,0 +1,56 @@
+{% import 'components/config/editable_config.html' as m_editable_config %}
+{% macro config_currency_card(config_symbols, crypto_currency, symbol_list_by_type, full_symbol_list, get_currency_id, add_class='', no_select=False, additional_classes="", symbol="") -%}
+    {% set card_symbol = symbol | upper if symbol else crypto_currency[:4] | upper %}
+    <!-- Card -->
+    <div class="card {{add_class}} mb-3 medium-size config-card currency-config-card"
+         data-currency-name="{{ crypto_currency }}"
+         data-currency-symbol="{{ card_symbol }}">
+
+        <!--Title-->
+        <div class="card-header currency-card-header">
+            <div class="currency-card-identity">
+                <span class="currency-card-name">{{crypto_currency}}</span>
+                <span class="currency-card-symbol">{{ card_symbol }}</span>
+            </div>
+            <span class="currency-card-status"><i class="fas fa-circle"></i> Configured</span>
+        </div>
+
+        <!--Card image-->
+        <div class="view overlay animated fadeIn">
+            <img class="card-img-top currency-image p-2 {{additional_classes}}"
+                 src="{{ url_for('static', filename='img/svg/loading_currency.svg') }}"
+                 alt="{{ crypto_currency }}"
+                 data-currency-id="{{get_currency_id(full_symbol_list, crypto_currency)}}"
+                 style="height:100%">
+        </div>
+
+        <!--Card content-->
+        <div class="card-body" name="{{crypto_currency}}" config-key="crypto-currencies_{{crypto_currency}}">
+
+            <div class="currency-card-intro">
+                <span class="currency-card-symbol-large">{{ card_symbol }}</span>
+                <div>
+                    <strong>{{ crypto_currency }}</strong>
+                    <small>Choose one or more exchange symbols below</small>
+                </div>
+            </div>
+
+            <p class="card-text symbols my-0 {{additional_classes}}">
+                 {{ m_editable_config.editable_key( config_symbols,
+                                                    crypto_currency,
+                                                    "crypto-currencies_" + crypto_currency,
+                                                    "global_config",
+                                                    config_symbols[crypto_currency]['pairs'] if crypto_currency in config_symbols and ('pairs' in config_symbols[crypto_currency] or 'pair' in config_symbols[crypto_currency]) else [],
+                                                    config_symbols[crypto_currency]['pairs'] if crypto_currency in config_symbols and ('pairs' in config_symbols[crypto_currency] or 'pair' in config_symbols[crypto_currency]) else [],
+                                                    symbol_list_by_type,
+                                                    no_select,
+                                                    identifier=crypto_currency,
+                                                    placeholder_str="Select trading pair(s)",
+                                                    dict_as_option_group=True)
+                }}
+            </p>
+
+            <button type="button" class="btn btn-danger remove-btn px-3 waves-effect currency-remove-btn"><i class="fa fa-trash-can" aria-hidden="true"></i> Remove currency</button>
+        </div>
+    </div>
+{%- endmacro %}

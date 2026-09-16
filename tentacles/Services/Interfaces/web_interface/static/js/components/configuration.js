@@ -158,6 +158,13 @@ function handleCardDecksAddButtons(){
 
         // check if not already added
         if(deck.find("div[name='"+select_value+"']").length === 0){
+            // A template must never carry a live Select2 instance into a new card.
+            // Copied Select2 markup contains stale IDs and event state and creates a
+            // visible but non-clickable picker on the third and later currency cards.
+            target_template.find(".select2").remove();
+            target_template.find("select.select2-hidden-accessible")
+                .removeClass("select2-hidden-accessible")
+                .removeAttr("data-select2-id aria-hidden tabindex");
             let template_default = target_template.html().replace(new RegExp(config_default_value,"g"), select_value);
             template_default = template_default.replace(new RegExp("card-text symbols default","g"), "card-text symbols");
             template_default = template_default.replace(new RegExp("card-img-top currency-image default","g"), "card-img-top currency-image");
@@ -170,10 +177,23 @@ function handleCardDecksAddButtons(){
             }
             deck.append(template_default).hide().fadeIn();
 
+            let $newCurrencyCard = $();
+            if (select_symbol) {
+                $newCurrencyCard = deck.find("div[name='" + select_value + "']").last().closest(".currency-config-card");
+                $newCurrencyCard.attr("data-currency-name", select_value);
+                $newCurrencyCard.attr("data-currency-symbol", String(select_symbol).toUpperCase());
+                $newCurrencyCard.find(".currency-card-symbol, .currency-card-symbol-large")
+                    .text(String(select_symbol).toUpperCase());
+                $newCurrencyCard.find(".currency-card-name, .currency-card-intro strong").text(select_value);
+            }
+
             handle_editable();
+            const $newEditableSelect = $newCurrencyCard.length
+                ? $newCurrencyCard.find("select.multi-select-element").first()
+                : $(editable_selector).not(".default select").first();
 
             // select options with reference market if any
-            $(editable_selector).each(function () {
+            $newEditableSelect.each(function () {
                 if (
                     $(this).siblings('.select2').length === 0
                     && !$(this).parents('.default').length
@@ -217,7 +237,7 @@ function handleCardDecksAddButtons(){
             }
 
             // add select2 selector
-            $(editable_selector).each(function () {
+            $newEditableSelect.each(function () {
                 if (
                     $(this).siblings('.select2').length === 0
                     && !$(this).parents('.default').length
@@ -242,6 +262,7 @@ function handleCardDecksAddButtons(){
             handleDefaultImages();
 
             register_edit_events();
+            window.setTimeout(enhanceTradingPairSelects, 80);
         }
 
     });
@@ -771,8 +792,16 @@ function formatTradingPairSelection(item) {
 function enhanceTradingPairSelects() {
     $("select.multi-select-element").each(function () {
         const $select = $(this);
+        if ($select.closest(".default, #AddCurrency-template-default").length) {
+            return;
+        }
         const configKey = $select.attr("config-key") || "";
         if (configKey.startsWith("crypto-currencies_")) {
+            const $card = $select.closest(".currency-config-card");
+            const currencySymbol = String($card.attr("data-currency-symbol") || "").toUpperCase();
+            const pairPlaceholder = currencySymbol
+                ? `Search ${currencySymbol} symbols…`
+                : "Search trading symbols…";
             try {
                 if ($select.hasClass("select2-hidden-accessible")) {
                     $select.select2('destroy');
@@ -780,17 +809,71 @@ function enhanceTradingPairSelects() {
                 $select.select2({
                     width: '100%',
                     dropdownAutoWidth: false,
+                    dropdownParent: $card,
                     tags: true,
-                    placeholder: "Select trading pair(s)",
+                    closeOnSelect: false,
+                    placeholder: pairPlaceholder,
                     templateResult: formatTradingPairResult,
-                    templateSelection: formatTradingPairSelection
+                    templateSelection: formatTradingPairSelection,
+                    language: {
+                        noResults: function () {
+                            return "No matching symbol. Type a full pair and press Enter to add it.";
+                        }
+                    }
                 });
+
+                const $container = $select.next(".select2");
+                if (!$card.find(".pair-picker-label").length) {
+                    $container.before(`
+                        <div class="pair-picker-label">
+                            <span><i class="fas fa-arrow-right-arrow-left"></i> Trading symbols</span>
+                            <small>Click anywhere in the box, then type to search</small>
+                        </div>
+                    `);
+                }
+
+                const updatePairCount = function () {
+                    const count = ($select.val() || []).length;
+                    let $count = $card.find(".pair-selection-count");
+                    if (!$count.length) {
+                        $container.after('<div class="pair-selection-count" aria-live="polite"></div>');
+                        $count = $card.find(".pair-selection-count");
+                    }
+                    $count.html(count
+                        ? `<i class="fas fa-check-circle"></i> ${count} symbol${count === 1 ? "" : "s"} selected`
+                        : '<i class="fas fa-circle-info"></i> Select at least one symbol to trade');
+                    $count.toggleClass("has-selection", count > 0);
+                };
+
+                $select.off("change.pairPickerUx").on("change.pairPickerUx", updatePairCount);
+                $select.off("select2:opening.pairPickerUx select2:close.pairPickerUx")
+                    .on("select2:opening.pairPickerUx", function () {
+                        $(".currency-config-card").removeClass("pair-dropdown-open");
+                        $card.addClass("pair-dropdown-open");
+                    })
+                    .on("select2:close.pairPickerUx", function () {
+                        $card.removeClass("pair-dropdown-open");
+                    });
+                updatePairCount();
             } catch (e) {
                 window.console && console.warn("Select2 error for " + configKey, e);
             }
         }
     });
 }
+
+function refreshTradingPairSelectsWhenVisible() {
+    if ($("#panelCurrency").hasClass("show") || $("#panelCurrency").is(":visible")) {
+        window.setTimeout(enhanceTradingPairSelects, 80);
+    }
+}
+
+$(document).off("shown.bs.tab.currencyPairs", "#panelCurrency-tab")
+    .on("shown.bs.tab.currencyPairs", "#panelCurrency-tab", refreshTradingPairSelectsWhenVisible);
+
+$(window).off("resize.currencyPairs").on("resize.currencyPairs", function () {
+    $("#panelCurrency .select2-container").css("width", "100%");
+});
 
 function tradingCurrencyEscape(value) {
     return String(value === undefined || value === null ? "" : value).replace(/[&<>'"]/g, function (character) {
@@ -1283,6 +1366,7 @@ function fetch_currencies(){
                     currencyDetailsById[element.i] = element
                 }
             });
+            syncCurrencyCardSymbols();
             data.slice(0, maxDisplayedOptions).forEach((element) => {
                 options.push(getCurrencyOption(addCurrencySelect, element))
             });
@@ -1300,6 +1384,23 @@ function fetch_currencies(){
         error: function (result, status) {
             window.console && console.error(`Impossible to get currency list: ${result.responseText} (${status})`);
         }
+    });
+}
+
+function syncCurrencyCardSymbols() {
+    $("#panelCurrency .currency-config-card").each(function () {
+        const $card = $(this);
+        const currencyId = String($card.find(".currency-image").attr("data-currency-id") || "").toLowerCase();
+        const details = currencyDetailsById[currencyId];
+        if (!details) {
+            return;
+        }
+        const symbol = getTradingCurrencySymbol(details);
+        if (!symbol) {
+            return;
+        }
+        $card.attr("data-currency-symbol", symbol);
+        $card.find(".currency-card-symbol, .currency-card-symbol-large").text(symbol);
     });
 }
 
