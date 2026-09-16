@@ -1748,3 +1748,600 @@ select.multi-select-element:not(.select2-hidden-accessible) option:checked {
     font-weight: bold !important;
 }
 
+/* ==========================================================================
+   CURRENCY CARD UX — wide, searchable symbol configuration
+   ========================================================================== */
+
+#panelCurrency .config-container.card-deck {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)) !important;
+    align-items: start !important;
+    gap: 22px !important;
+    margin: 0 !important;
+    width: 100% !important;
+}
+
+#panelCurrency .config-container .currency-config-card {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    min-height: 445px !important;
+    margin: 0 !important;
+    overflow: visible !important;
+    border: 1px solid rgba(212, 175, 55, 0.28) !important;
+    background:
+        linear-gradient(145deg, rgba(212, 175, 55, 0.055), transparent 32%),
+        #0e0e14 !important;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45) !important;
+    transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease !important;
+}
+
+#panelCurrency .config-container .currency-config-card:hover {
+    transform: translateY(-2px) !important;
+    border-color: rgba(212, 175, 55, 0.62) !important;
+    box-shadow: 0 18px 42px rgba(0, 0, 0, 0.58), 0 0 20px rgba(212, 175, 55, 0.08) !important;
+}
+
+#panelCurrency .config-container .currency-config-card.pair-dropdown-open {
+    z-index: 100 !important;
+}
+
+.currency-config-card .select2-container--open {
+    z-index: 101 !important;
+}
+
+.currency-config-card .select2-dropdown {
+    width: 100% !important;
+    min-width: 100% !important;
+}
+
+.currency-card-header {
+    min-height: 62px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 12px !important;
+    padding: 14px 18px !important;
+    background: rgba(255, 255, 255, 0.025) !important;
+    border-bottom: 1px solid rgba(212, 175, 55, 0.25) !important;
+}
+
+.currency-card-identity {
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.currency-card-name {
+    overflow: hidden;
+    color: #ffffff;
+    font-family: 'Outfit', sans-serif;
+    font-size: 18px;
+    font-weight: 750;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.currency-card-symbol {
+    flex: 0 0 auto;
+    padding: 4px 8px;
+    border: 1px solid rgba(212, 175, 55, 0.52);
+    border-radius: 5px;
+    background: rgba(212, 175, 55, 0.12);
+    color: #f7dc83;
+    font: 800 11px 'JetBrains Mono', monospace;
+    letter-spacing: 0.06em;
+}
+
+.currency-card-status {
+    flex: 0 0 auto;
+    color: #9ca099;
+    font: 650 10px 'JetBrains Mono', monospace;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.currency-card-status i {
+    margin-right: 4px;
+    color: #00e676;
+    font-size: 7px;
+    vertical-align: 1px;
+    text-shadow: 0 0 8px rgba(0, 230, 118, 0.75);
+}
+
+#panelCurrency .currency-config-card .view.overlay {
+    display: none !important;
+}
+
+.currency-config-card > .card-body {
+    display: flex !important;
+    flex-direction: column !important;
+    padding: 20px !important;
+    overflow: visible !important;
+}
+
+.currency-card-intro {
+    display: grid;
+    grid-template-columns: 52px minmax(0, 1fr);
+    align-items: center;
+    gap: 13px;
+    margin-bottom: 19px;
+    padding-bottom: 17px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.currency-card-symbol-large {
+    width: 52px;
+    height: 52px;
+    display: inline-grid;
+    place-items: center;
+    overflow: hidden;
+    padding: 0 4px;
+    border: 1px solid rgba(212, 175, 55, 0.48);
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, #3d351b, #111116 68%);
+    color: #f7dc83;
+    font: 800 10px 'JetBrains Mono', monospace;
+    box-shadow: 0 0 17px rgba(212, 175, 55, 0.18);
+}
+
+.currency-card-intro strong,
+.currency-card-intro small {
+    display: block;
+}
+
+.currency-card-intro strong {
+    color: #ffffff;
+    font: 700 16px 'Outfit', sans-serif;
+}
+
+.currency-card-intro small {
+    margin-top: 3px;
+    color: #8f929a;
+    font-size: 11px;
+    line-height: 1.4;
+}
+
+/* The currency name is already prominent in the card header. */
+.currency-config-card .card-text.symbols > span > .text-capitalize:first-child,
+.currency-config-card .card-text.symbols > span > .text-capitalize:first-child + br {
+    display: none !important;
+}
+
+.currency-config-card .card-text.symbols {
+    width: 100% !important;
+    color: #ffffff !important;
+}
+
+.currency-config-card .custom-control.custom-switch {
+    min-height: 34px;
+    margin: 0 0 16px 2px;
+    padding-top: 3px;
+}
+
+.currency-config-card .custom-control-label {
+    color: #f3f3f5 !important;
+    font-weight: 650 !important;
+}
+
+.pair-picker-label {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 10px;
+    margin: 4px 0 8px;
+}
+
+.pair-picker-label > span {
+    color: #f4f1e8;
+    font: 700 13px 'Outfit', sans-serif;
+}
+
+.pair-picker-label i {
+    margin-right: 6px;
+    color: var(--gold-primary);
+}
+
+.pair-picker-label small {
+    color: #858891;
+    font-size: 10px;
+    text-align: right;
+}
+
+.currency-config-card .select2-container {
+    display: block !important;
+    width: 100% !important;
+    min-width: 0 !important;
+}
+
+.currency-config-card .select2-container--default .select2-selection--multiple {
+    width: 100% !important;
+    min-height: 62px !important;
+    padding: 8px 40px 8px 9px !important;
+    border: 1.5px solid rgba(212, 175, 55, 0.62) !important;
+    background: #0a0a0f !important;
+    box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.72), 0 0 0 1px rgba(212, 175, 55, 0.03) !important;
+}
+
+.currency-config-card .select2-container--default .select2-selection--multiple:hover {
+    border-color: #e6bd55 !important;
+    background: #111015 !important;
+}
+
+.currency-config-card .select2-container--default .select2-search--inline .select2-search__field {
+    min-width: 210px !important;
+    min-height: 34px !important;
+    padding: 8px !important;
+    color: #ffffff !important;
+    caret-color: #f7dc83 !important;
+}
+
+.currency-config-card .select2-container--default .select2-search--inline .select2-search__field::placeholder {
+    color: #c8ad61 !important;
+    opacity: 1 !important;
+}
+
+.currency-config-card .select2-selection__choice {
+    min-height: 32px !important;
+    padding: 6px 10px !important;
+}
+
+.pair-selection-count {
+    margin: 8px 1px 0;
+    color: #8c8f97;
+    font-size: 11px;
+}
+
+.pair-selection-count i {
+    margin-right: 5px;
+    color: #8c8f97;
+}
+
+.pair-selection-count.has-selection {
+    color: #85d9b2;
+}
+
+.pair-selection-count.has-selection i {
+    color: #00e676;
+}
+
+.currency-remove-btn {
+    align-self: flex-start;
+    margin-top: 22px !important;
+    padding: 9px 13px !important;
+    border: 1px solid rgba(255, 61, 83, 0.6) !important;
+    background: rgba(255, 40, 65, 0.12) !important;
+    color: #ff7d8c !important;
+    box-shadow: none !important;
+    font-size: 11px !important;
+}
+
+.currency-remove-btn:hover {
+    background: #df263c !important;
+    color: #ffffff !important;
+}
+
+/* Make the native control usable if Select2 is delayed or unavailable. */
+#panelCurrency select.multi-select-element:not(.select2-hidden-accessible) {
+    display: block !important;
+    width: 100% !important;
+    min-height: 190px !important;
+    padding: 8px !important;
+    border-color: rgba(212, 175, 55, 0.62) !important;
+    background: #0a0a0f !important;
+}
+
+#panelCurrency select.multi-select-element:not(.select2-hidden-accessible) option {
+    min-height: 34px !important;
+    padding: 8px 10px !important;
+    color: #f3f3f5 !important;
+}
+
+@media (min-width: 1500px) {
+    #panelCurrency .config-container.card-deck {
+        grid-template-columns: repeat(3, minmax(320px, 1fr)) !important;
+    }
+}
+
+@media (max-width: 720px) {
+    #panelCurrency .config-container.card-deck {
+        grid-template-columns: minmax(0, 1fr) !important;
+        gap: 16px !important;
+    }
+
+    .currency-config-card > .card-body {
+        padding: 16px !important;
+    }
+
+    .pair-picker-label {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 3px;
+    }
+
+    .pair-picker-label small {
+        text-align: left;
+    }
+
+    .currency-card-status {
+        display: none;
+    }
+}
+
+/* ==========================================================================
+   DATA COLLECTOR & GLOBAL DROPDOWNS LUXURY THEME
+   ========================================================================== */
+
+/* Select2 Single-Select Container (e.g. Exchange selector on Data Collector) */
+.select2-container--default .select2-selection--single {
+    background: #0f0e15 !important;
+    border: 1.5px solid rgba(212, 175, 55, 0.5) !important;
+    border-radius: 8px !important;
+    min-height: 44px !important;
+    height: 44px !important;
+    padding: 0 36px 0 14px !important;
+    position: relative !important;
+    cursor: pointer !important;
+    display: flex !important;
+    align-items: center !important;
+    box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.7) !important;
+    transition: all 0.2s ease !important;
+    box-sizing: border-box !important;
+}
+
+.select2-container--default.select2-container--focus .select2-selection--single,
+.select2-container--default.select2-container--open .select2-selection--single {
+    border-color: var(--gold-primary) !important;
+    box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.25), inset 0 2px 6px rgba(0, 0, 0, 0.7) !important;
+}
+
+.select2-container--default .select2-selection--single .select2-selection__rendered {
+    color: #ffffff !important;
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    font-family: 'Outfit', sans-serif !important;
+    line-height: 42px !important;
+    padding: 0 !important;
+    width: 100% !important;
+}
+
+.select2-container--default .select2-selection--single .select2-selection__placeholder {
+    color: #F5D77F !important;
+    opacity: 0.85 !important;
+    font-weight: 500 !important;
+}
+
+.select2-container--default .select2-selection--single .select2-selection__arrow {
+    height: 100% !important;
+    position: absolute !important;
+    top: 0 !important;
+    right: 12px !important;
+    width: 20px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+.select2-container--default .select2-selection--single .select2-selection__arrow b {
+    border-color: var(--gold-primary) transparent transparent transparent !important;
+    border-width: 6px 5px 0 5px !important;
+    transition: transform 0.2s ease !important;
+}
+
+.select2-container--default.select2-container--open .select2-selection--single .select2-selection__arrow b {
+    border-color: transparent transparent var(--gold-primary) transparent !important;
+    border-width: 0 5px 6px 5px !important;
+}
+
+/* Select2 Dropdown Search Field */
+.select2-container--default .select2-search--dropdown {
+    padding: 10px !important;
+    background: #0d0c14 !important;
+}
+
+.select2-container--default .select2-search--dropdown .select2-search__field {
+    background: #14131d !important;
+    border: 1.5px solid var(--gold-border) !important;
+    color: #ffffff !important;
+    border-radius: 6px !important;
+    padding: 8px 12px !important;
+    font-size: 13.5px !important;
+    font-family: 'Outfit', sans-serif !important;
+    outline: none !important;
+    box-sizing: border-box !important;
+    width: 100% !important;
+}
+
+.select2-container--default .select2-search--dropdown .select2-search__field:focus {
+    border-color: var(--gold-primary) !important;
+    box-shadow: 0 0 8px rgba(212, 175, 55, 0.4) !important;
+}
+
+/* Bootstrap-Select Luxury Styling (Fallback & Social Data Collector) */
+.bootstrap-select > .dropdown-toggle.btn-light,
+.bootstrap-select > .dropdown-toggle.btn-default,
+.bootstrap-select > .btn {
+    background: #0f0e15 !important;
+    border: 1.5px solid rgba(212, 175, 55, 0.5) !important;
+    color: #ffffff !important;
+    border-radius: 8px !important;
+    min-height: 44px !important;
+    height: 44px !important;
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    font-family: 'Outfit', sans-serif !important;
+    padding: 0 16px !important;
+    box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.7) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    width: 100% !important;
+}
+
+.bootstrap-select > .btn:focus,
+.bootstrap-select.show > .btn {
+    border-color: var(--gold-primary) !important;
+    box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.25), inset 0 2px 6px rgba(0, 0, 0, 0.7) !important;
+}
+
+.bootstrap-select .filter-option-inner-inner {
+    color: #ffffff !important;
+    font-size: 14px !important;
+    font-weight: 600 !important;
+}
+
+.bootstrap-select .dropdown-toggle::after {
+    color: var(--gold-primary) !important;
+    border-top: 0.35em solid var(--gold-primary) !important;
+    border-right: 0.35em solid transparent !important;
+    border-left: 0.35em solid transparent !important;
+    margin-left: 8px !important;
+}
+
+.bootstrap-select .dropdown-menu {
+    background: #0d0c14 !important;
+    border: 1.5px solid var(--gold-primary) !important;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.95), 0 0 20px rgba(212, 175, 55, 0.3) !important;
+    border-radius: 8px !important;
+    padding: 6px 0 !important;
+    z-index: 9999999 !important;
+}
+
+.bootstrap-select .bs-searchbox {
+    padding: 10px !important;
+}
+
+.bootstrap-select .bs-searchbox input.form-control {
+    background: #14131d !important;
+    border: 1.5px solid var(--gold-border) !important;
+    color: #ffffff !important;
+    border-radius: 6px !important;
+    padding: 8px 12px !important;
+    font-size: 13.5px !important;
+}
+
+.bootstrap-select .bs-searchbox input.form-control:focus {
+    border-color: var(--gold-primary) !important;
+    box-shadow: 0 0 8px rgba(212, 175, 55, 0.4) !important;
+}
+
+.bootstrap-select .dropdown-header {
+    background: linear-gradient(90deg, rgba(212, 175, 55, 0.25) 0%, rgba(212, 175, 55, 0.05) 100%) !important;
+    color: var(--gold-light) !important;
+    font-weight: 800 !important;
+    font-size: 12px !important;
+    text-transform: uppercase !important;
+    letter-spacing: 1px !important;
+    padding: 8px 14px !important;
+}
+
+.bootstrap-select .dropdown-item {
+    padding: 10px 14px !important;
+    color: #e0e0e8 !important;
+    font-size: 13.5px !important;
+    cursor: pointer !important;
+}
+
+.bootstrap-select .dropdown-item:hover,
+.bootstrap-select .dropdown-item.active,
+.bootstrap-select .dropdown-item.selected {
+    background: rgba(212, 175, 55, 0.25) !important;
+    color: #ffffff !important;
+    border-left: 4px solid var(--gold-primary) !important;
+}
+
+/* Date Range Inputs */
+input[type="date"].datepicker,
+input[type="date"].form-control {
+    background: #0f0e15 !important;
+    border: 1.5px solid rgba(212, 175, 55, 0.5) !important;
+    border-radius: 8px !important;
+    color: #ffffff !important;
+    min-height: 44px !important;
+    height: 44px !important;
+    padding: 0 12px !important;
+    font-size: 13.5px !important;
+    font-family: 'JetBrains Mono', monospace !important;
+    box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.7) !important;
+    transition: all 0.2s ease !important;
+}
+
+input[type="date"].datepicker:focus,
+input[type="date"].form-control:focus {
+    border-color: var(--gold-primary) !important;
+    box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.25), inset 0 2px 6px rgba(0, 0, 0, 0.7) !important;
+}
+
+input[type="date"].datepicker::-webkit-calendar-picker-indicator,
+input[type="date"].form-control::-webkit-calendar-picker-indicator {
+    filter: invert(0.8) sepia(100%) saturate(300%) hue-rotate(5deg);
+    cursor: pointer;
+}
+
+/* Gold Button Utilities */
+.btn-gold {
+    background: var(--gold-gradient) !important;
+    color: #000000 !important;
+    font-weight: 700 !important;
+    border: none !important;
+    box-shadow: 0 4px 15px rgba(212, 175, 55, 0.35) !important;
+    border-radius: 8px !important;
+    transition: all 0.2s ease !important;
+}
+
+.btn-gold:hover {
+    background: var(--gold-gradient-hover) !important;
+    box-shadow: 0 6px 20px rgba(212, 175, 55, 0.55) !important;
+    color: #000000 !important;
+    transform: translateY(-1px);
+}
+
+.btn-outline-gold {
+    background: transparent !important;
+    border: 1.5px solid var(--gold-primary) !important;
+    color: var(--gold-light) !important;
+    font-weight: 600 !important;
+    border-radius: 8px !important;
+    transition: all 0.2s ease !important;
+}
+
+.btn-outline-gold:hover {
+    background: rgba(212, 175, 55, 0.15) !important;
+    color: #ffffff !important;
+    box-shadow: 0 0 12px rgba(212, 175, 55, 0.3) !important;
+}
+
+.shadow-gold {
+    box-shadow: 0 4px 15px rgba(212, 175, 55, 0.35) !important;
+}
+
+.text-gold {
+    color: var(--gold-light) !important;
+}
+
+/* DataTables Controls on Data Collector Table */
+.dataTables_wrapper .dataTables_length select {
+    background: #0f0e15 !important;
+    border: 1.5px solid rgba(212, 175, 55, 0.5) !important;
+    color: #ffffff !important;
+    border-radius: 6px !important;
+    padding: 4px 8px !important;
+    font-size: 13px !important;
+}
+
+.dataTables_wrapper .dataTables_filter input {
+    background: #0f0e15 !important;
+    border: 1.5px solid rgba(212, 175, 55, 0.5) !important;
+    color: #ffffff !important;
+    border-radius: 6px !important;
+    padding: 6px 12px !important;
+    font-size: 13px !important;
+    outline: none !important;
+}
+
+.dataTables_wrapper .dataTables_filter input:focus {
+    border-color: var(--gold-primary) !important;
+    box-shadow: 0 0 8px rgba(212, 175, 55, 0.35) !important;
+}
+
