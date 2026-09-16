@@ -2,7 +2,7 @@ services:
   octobot:
     labels:
       - traefik.enable=true
-      - traefik.http.routers.octobot.rule=Host(`${HOST:-octobot.localhost}`)
+      - traefik.http.routers.octobot.rule=Host(`${HOST:-octobot.localhost}`) || Host(`www.${HOST:-octobot.localhost}`)
       - traefik.http.routers.octobot.entrypoints=websecure
       - traefik.http.routers.octobot.tls=true
       - traefik.http.routers.octobot.tls.certresolver=letsencrypt
