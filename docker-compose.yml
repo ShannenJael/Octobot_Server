@@ -16,6 +16,8 @@ services:
       MARKET_RADAR_AI_MODEL: "${MARKET_RADAR_AI_MODEL:-gpt-5-mini}"
       MARKET_RADAR_PAPER_HANDOFF_ENABLED: "${MARKET_RADAR_PAPER_HANDOFF_ENABLED:-false}"
       OPENAI_API_KEY: "${OPENAI_API_KEY:-}"
+      CRYPTO_COM_API_KEY: "${CRYPTO_COM_API_KEY:-}"
+      CRYPTO_COM_API_SECRET: "${CRYPTO_COM_API_SECRET:-}"
     command:
       - --standalone
       - --host
@@ -26,6 +28,7 @@ services:
       - "${OCTOBOT_HOST_PORT:-5002}:5001"
     volumes:
       - ./user:/octobot/user
+      - ./market_radar:/octobot/market_radar
       - ./tentacles:/octobot/tentacles
       - ./logs:/octobot/logs
       - ./backtesting:/octobot/backtesting

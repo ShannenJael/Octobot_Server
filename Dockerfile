@@ -10,6 +10,8 @@ COPY market_radar /octobot/market_radar
 COPY tentacles/Services/Interfaces/web_interface/plugins/__init__.py /octobot/tentacles/Services/Interfaces/web_interface/plugins/__init__.py
 COPY tentacles/Services/Interfaces/web_interface/plugins/market_radar_plugin.py /octobot/tentacles/Services/Interfaces/web_interface/plugins/market_radar_plugin.py
 COPY tentacles/Services/Interfaces/web_interface/plugins/market_radar_assets /octobot/tentacles/Services/Interfaces/web_interface/plugins/market_radar_assets
+COPY tentacles/Services/Interfaces/web_interface/plugins/crypto_com_trader_plugin.py /octobot/tentacles/Services/Interfaces/web_interface/plugins/crypto_com_trader_plugin.py
+COPY tentacles/Services/Interfaces/web_interface/plugins/crypto_com_trader_assets /octobot/tentacles/Services/Interfaces/web_interface/plugins/crypto_com_trader_assets
 COPY tentacles/Evaluator/Strategies/market_radar_strategy_evaluator /octobot/tentacles/Evaluator/Strategies/market_radar_strategy_evaluator
 
 EXPOSE 5001
