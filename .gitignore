@@ -131,6 +131,9 @@ tentacles/Services/Interfaces/web_interface/plugins/*
 !tentacles/Services/Interfaces/web_interface/plugins/market_radar_plugin.py
 !tentacles/Services/Interfaces/web_interface/plugins/market_radar_assets/
 !tentacles/Services/Interfaces/web_interface/plugins/market_radar_assets/**
+!tentacles/Services/Interfaces/web_interface/plugins/crypto_com_trader_plugin.py
+!tentacles/Services/Interfaces/web_interface/plugins/crypto_com_trader_assets/
+!tentacles/Services/Interfaces/web_interface/plugins/crypto_com_trader_assets/**
 !tentacles/Services/Interfaces/web_interface/templates/
 tentacles/Services/Interfaces/web_interface/templates/*
 !tentacles/Services/Interfaces/web_interface/templates/layout.html

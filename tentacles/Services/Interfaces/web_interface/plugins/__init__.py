@@ -28,9 +28,13 @@ from tentacles.Services.Interfaces.web_interface.plugins.plugin_management impor
 from tentacles.Services.Interfaces.web_interface.plugins.market_radar_plugin import (
     MarketRadarPlugin,
 )
+from tentacles.Services.Interfaces.web_interface.plugins.crypto_com_trader_plugin import (
+    CryptoComTraderPlugin,
+)
 
 __all__ = [
     "AbstractWebInterfacePlugin",
     "register_all_plugins",
     "MarketRadarPlugin",
+    "CryptoComTraderPlugin",
 ]

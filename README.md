@@ -154,6 +154,18 @@ Open **Market Radar** in the OctoBot navigation to rank liquid Crypto.com USDT s
 
 The local deterministic explanation is always available. Optional OpenAI wording can be enabled with `MARKET_RADAR_AI_ENABLED=true` and `OPENAI_API_KEY`; numeric scoring remains authoritative and no news sentiment is claimed without a verified news feed. Paper candidates remain disabled until validation. Enabling `MARKET_RADAR_PAPER_HANDOFF_ENABLED=true` only writes a candidate with `execution_status=not_submitted`; it does not execute a trade.
 
+## Crypto.com Trader & Strategy Hub
+
+Open **Crypto.com Trader** in the OctoBot navigation bar (`/crypto-com`) to interactively trade and deploy automated strategies using the [Crypto.com Exchange Pro APIs](https://crypto.com/exchange-pro/en-US/api).
+
+### Key Features:
+- **Dual Execution Safety**: Operates in simulated **Paper Trading** mode by default with $10,000 USDT virtual bankroll. Real orders on Crypto.com are only submitted when explicitly switched to **Live Trading** with HMAC-SHA256 authenticated API credentials.
+- **Pro Terminal**: Interactive candlestick & volume charts across multi-timeframes (15m, 1h, 4h, 1D), real-time order book depth ladder, one-click order forms (Market, Limit, Stop-Loss), percentage sizing sliders, and active open orders table with instant cancellation.
+- **AI Radar Momentum Bot**: Automated execution bridging Market Radar's multi-timeframe scoring into automated buy and exit triggers.
+- **Grid Trading Bot**: Automated volatility harvesting with user-defined upper/lower bounds, dynamic grid level calculation, and per-grid profit tracking.
+- **DCA (Dollar-Cost Averaging) Accumulator**: Scheduled recurring accumulation with dynamic dip weighting during market dips.
+- **Portfolio Ledger**: Real-time asset balances, allocation distribution, and unrealized PnL.
+
 Do not risk money which you are afraid to lose. USE THE SOFTWARE AT YOUR OWN RISK. THE AUTHORS 
 AND ALL AFFILIATES ASSUME NO RESPONSIBILITY FOR YOUR TRADING RESULTS. 
 
