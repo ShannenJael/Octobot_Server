@@ -96,13 +96,24 @@
     });
 
     // Orders subtabs
+    function switchOrderSubtab(sub) {
+      document.querySelectorAll("#order-table-tabs .nav-link").forEach((l) => {
+        if (l.dataset.subtab === sub) {
+          l.classList.add("active");
+        } else {
+          l.classList.remove("active");
+        }
+      });
+      const openWrap = $("table-open-orders-wrap");
+      const histWrap = $("table-order-history-wrap");
+      if (openWrap) openWrap.style.display = sub === "open-orders" ? "block" : "none";
+      if (histWrap) histWrap.style.display = sub === "order-history" ? "block" : "none";
+    }
+    window.switchOrderSubtab = switchOrderSubtab;
+
     document.querySelectorAll("#order-table-tabs .nav-link").forEach((link) => {
       link.addEventListener("click", () => {
-        document.querySelectorAll("#order-table-tabs .nav-link").forEach((l) => l.classList.remove("active"));
-        link.classList.add("active");
-        const sub = link.dataset.subtab;
-        $("table-open-orders-wrap").style.display = sub === "open-orders" ? "block" : "none";
-        $("table-order-history-wrap").style.display = sub === "order-history" ? "block" : "none";
+        switchOrderSubtab(link.dataset.subtab);
       });
     });
   }
@@ -494,7 +505,14 @@
         });
         const data = await res.json();
         if (res.ok) {
-          toast(`${state.orderSide} order placed successfully!`, "success");
+          const isFilled = data.order && data.order.status === "FILLED";
+          if (isFilled) {
+            toast(`⚡ ${state.orderSide} ${state.pair} MARKET order filled instantly at $${data.order.price || state.lastPrice}! Showing in Execution History.`, "success");
+            switchOrderSubtab("order-history");
+          } else {
+            toast(`📋 ${state.orderSide} ${state.pair} LIMIT order placed! It is now active in Open Orders.`, "success");
+            switchOrderSubtab("open-orders");
+          }
           $("order-qty").value = "";
           recalcOrderSummary();
           refreshPortfolio();
@@ -617,10 +635,21 @@
   }
 
   function renderOpenOrders(orders) {
-    $("count-open-orders").textContent = orders.length;
+    const countEl = $("count-open-orders");
+    if (countEl) countEl.textContent = orders.length;
     const tbody = $("open-orders-tbody");
     if (!orders.length) {
-      tbody.innerHTML = `<tr><td colspan="8" class="text-center text-muted py-4">No active open orders</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="8" class="text-center text-muted py-4">
+        <div class="mb-2"><i class="fas fa-inbox fa-2x text-muted" style="opacity:0.4;"></i></div>
+        <div class="font-weight-bold text-light">No Active Open Orders</div>
+        <small class="text-muted d-block mt-1">
+          Market orders execute instantly and appear under 
+          <a href="javascript:void(0)" onclick="window.switchOrderSubtab('order-history')" class="text-warning font-weight-bold" style="text-decoration: underline;">
+            Execution History
+          </a>.
+          Pending Limit orders will stay here until price reaches their trigger.
+        </small>
+      </td></tr>`;
       return;
     }
 
@@ -664,6 +693,8 @@
   };
 
   function renderOrderHistory(history) {
+    const countEl = $("count-order-history");
+    if (countEl) countEl.textContent = history.length;
     const tbody = $("order-history-tbody");
     if (!history.length) {
       tbody.innerHTML = `<tr><td colspan="9" class="text-center text-muted py-4">No trade history yet</td></tr>`;
