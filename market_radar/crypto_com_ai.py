@@ -27,18 +27,35 @@ class CryptoComAIEngine:
         self.trade_service = trade_service
         self.history: List[Dict[str, str]] = []
 
+    def _ensure_env_loaded(self) -> None:
+        """Load .env file if key environment variables are missing."""
+        if not os.getenv("ANTIGRAVITY_API_KEY") and not os.getenv("GEMINI_API_KEY") and not os.getenv("OPENAI_API_KEY"):
+            for env_path in [".env", "/octobot/.env", os.path.join(os.getcwd(), ".env")]:
+                if os.path.exists(env_path):
+                    try:
+                        with open(env_path, "r", encoding="utf-8") as f:
+                            for line in f:
+                                line = line.strip()
+                                if line and not line.startswith("#") and "=" in line:
+                                    k, v = line.split("=", 1)
+                                    os.environ.setdefault(k.strip(), v.strip())
+                    except Exception:
+                        pass
+
     def get_api_credentials(self) -> Tuple[Optional[str], str, Optional[str]]:
         """Identify available API provider and key."""
-        # 1. OpenAI / Codex
+        self._ensure_env_loaded()
+
+        # 1. Antigravity / Gemini (Priority)
+        gemini_key = os.getenv("ANTIGRAVITY_API_KEY") or os.getenv("GEMINI_API_KEY")
+        if gemini_key and not gemini_key.startswith("AQ.placeholder"):
+            return "gemini", gemini_key, "https://generativelanguage.googleapis.com/v1beta"
+
+        # 2. OpenAI / Codex
         openai_key = os.getenv("CODEX_API_KEY") or os.getenv("OPENAI_API_KEY")
         openai_base = os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1").rstrip("/")
         if openai_key and not openai_key.startswith("sk-proj-placeholder"):
             return "openai", openai_key, openai_base
-
-        # 2. Antigravity / Gemini
-        gemini_key = os.getenv("ANTIGRAVITY_API_KEY") or os.getenv("GEMINI_API_KEY")
-        if gemini_key:
-            return "gemini", gemini_key, "https://generativelanguage.googleapis.com/v1beta"
 
         return None, "", None
 
@@ -52,20 +69,27 @@ class CryptoComAIEngine:
         conversation_history: Optional[List[Dict[str, str]]] = None,
     ) -> Dict[str, Any]:
         """Process user natural language message and return conversational response + action cards."""
-        provider, api_key, base_url = self.get_api_credentials()
+        self._ensure_env_loaded()
         market_context = self._get_market_context(active_instrument)
 
-        # Try LLM if credentials present
-        if provider and api_key:
+        # 1. Try Antigravity / Gemini first
+        gemini_key = os.getenv("ANTIGRAVITY_API_KEY") or os.getenv("GEMINI_API_KEY")
+        if gemini_key and not gemini_key.startswith("AQ.placeholder"):
             try:
-                if provider == "openai":
-                    return self._call_openai_copilot(prompt, market_context, active_instrument, api_key, base_url)
-                elif provider == "gemini":
-                    return self._call_gemini_copilot(prompt, market_context, active_instrument, api_key, base_url)
+                return self._call_gemini_copilot(prompt, market_context, active_instrument, gemini_key, "https://generativelanguage.googleapis.com/v1beta")
             except Exception as e:
-                logger.warning("LLM API call failed, falling back to quantitative assistant: %s", e)
+                logger.warning("Antigravity API call failed (%s), attempting secondary provider...", e)
 
-        # Smart quantitative & pattern-matching fallback
+        # 2. Try OpenAI / Codex
+        openai_key = os.getenv("CODEX_API_KEY") or os.getenv("OPENAI_API_KEY")
+        openai_base = os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1").rstrip("/")
+        if openai_key and not openai_key.startswith("sk-proj-placeholder"):
+            try:
+                return self._call_openai_copilot(prompt, market_context, active_instrument, openai_key, openai_base)
+            except Exception as e:
+                logger.warning("OpenAI / Codex API call failed (%s), falling back to quantitative assistant...", e)
+
+        # 3. Smart quantitative & pattern-matching fallback
         return self._heuristic_copilot(prompt, market_context, active_instrument)
 
     def _call_openai_copilot(
@@ -133,37 +157,68 @@ class CryptoComAIEngine:
         base_url: str,
     ) -> Dict[str, Any]:
         """Send prompt to Google Antigravity / Gemini API."""
-        url = f"{base_url}/models/gemini-1.5-flash:generateContent?key={api_key}"
         system_instruction = (
             "You are a Crypto.com Exchange Pro Trading Copilot. "
-            "Given the live market context, answer user queries or output a structured trade action card. "
-            f"MARKET CONTEXT: {json.dumps(context)}. "
-            "Output JSON with 'reply' (markdown) and optional 'action_card'."
+            "Given the live market context, answer user queries or output a structured trade action card.\n"
+            f"LIVE MARKET CONTEXT:\n{json.dumps(context, indent=2)}\n\n"
+            "RULES:\n"
+            "1. If the user wants to trade (e.g. 'buy $100 BTC', 'limit sell 0.05 BTC at 90000'), "
+            "you MUST output JSON with an 'action_card' with keys: 'type': 'TRADE', 'instrument', 'side' ('BUY'/'SELL'), 'order_type' ('MARKET'/'LIMIT'), 'quantity' (float), 'price' (float or null), 'notional_usdt' (float), 'rationale' (string).\n"
+            "2. If user asks a question, reply with concise markdown in 'reply'.\n"
+            "3. Output MUST be valid JSON with 'reply' (string) and optional 'action_card' (dict or null)."
         )
 
         payload = {
             "contents": [
-                {"parts": [{"text": f"System: {system_instruction}\nUser: {prompt}"}]}
+                {"parts": [{"text": f"System Instruction:\n{system_instruction}\n\nUser Request:\n{prompt}"}]}
             ],
             "generationConfig": {"responseMimeType": "application/json"},
         }
 
-        req = urllib.request.Request(
-            url,
-            data=json.dumps(payload).encode("utf-8"),
-            headers={"Content-Type": "application/json"},
-            method="POST",
-        )
+        models_to_try = [
+            os.getenv("ANTIGRAVITY_MODEL", "gemini-3.6-flash"),
+            "gemini-3.5-flash",
+            "gemini-2.5-flash-lite",
+            "gemini-flash-latest",
+        ]
+        last_err = None
+        for model in models_to_try:
+            url = f"{base_url}/models/{model}:generateContent?key={api_key}"
+            req = urllib.request.Request(
+                url,
+                data=json.dumps(payload).encode("utf-8"),
+                headers={"Content-Type": "application/json"},
+                method="POST",
+            )
+            try:
+                with urllib.request.urlopen(req, timeout=12) as res:
+                    res_data = json.loads(res.read().decode("utf-8"))
+                    text = res_data["candidates"][0]["content"]["parts"][0]["text"]
+                    clean_text = text.strip()
+                    if clean_text.startswith("```json"):
+                        clean_text = clean_text[7:]
+                    if clean_text.startswith("```"):
+                        clean_text = clean_text[3:]
+                    if clean_text.endswith("```"):
+                        clean_text = clean_text[:-3]
+                    parsed = json.loads(clean_text.strip())
+                    return {
+                        "reply": parsed.get("reply", "Understood."),
+                        "action_card": parsed.get("action_card"),
+                        "provider": "gemini",
+                    }
+            except urllib.error.HTTPError as he:
+                last_err = he
+                if he.code in (503, 429, 404):
+                    continue
+                raise
+            except Exception as ex:
+                last_err = ex
+                continue
 
-        with urllib.request.urlopen(req, timeout=15) as res:
-            res_data = json.loads(res.read().decode("utf-8"))
-            text = res_data["candidates"][0]["content"]["parts"][0]["text"]
-            parsed = json.loads(text)
-            return {
-                "reply": parsed.get("reply", "Understood."),
-                "action_card": parsed.get("action_card"),
-                "provider": "gemini",
-            }
+        if last_err:
+            raise last_err
+        raise RuntimeError("All Gemini model endpoints were unavailable")
 
     def _heuristic_copilot(
         self,
