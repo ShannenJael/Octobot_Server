@@ -7,6 +7,7 @@ from market_radar.crypto_com_trade import (
     CryptoComTraderService,
     CryptoComAPIError,
 )
+from market_radar.crypto_com_ai import CryptoComAIEngine
 import tentacles.Services.Interfaces.web_interface.enums as web_enums
 import tentacles.Services.Interfaces.web_interface.login as login
 import tentacles.Services.Interfaces.web_interface.models as models
@@ -21,6 +22,7 @@ class CryptoComTraderPlugin(AbstractWebInterfacePlugin):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.service = CryptoComTraderService.get_instance()
+        self.ai_engine = CryptoComAIEngine(self.service)
 
     def get_tabs(self):
         return [
@@ -269,5 +271,59 @@ class CryptoComTraderPlugin(AbstractWebInterfacePlugin):
         def stop_radar():
             try:
                 return flask.jsonify(self.service.strategy_mgr.stop_radar())
+            except Exception as error:
+                return flask.jsonify({"error": str(error)}), 500
+
+        # --- AI Copilot & Radar Endpoints ---
+        @self.blueprint.route("/api/ai/copilot", methods=["POST"])
+        @login.login_required_when_activated
+        def ai_copilot():
+            body = flask.request.get_json(silent=True) or {}
+            prompt = str(body.get("prompt", "")).strip()
+            instrument = str(body.get("instrument", "BTC_USDT")).upper()
+            if not prompt:
+                return flask.jsonify({"error": "Prompt cannot be empty"}), 400
+            try:
+                res = self.ai_engine.process_copilot_message(
+                    prompt=prompt,
+                    active_instrument=instrument,
+                )
+                return flask.jsonify(res)
+            except Exception as error:
+                return flask.jsonify({"error": str(error)}), 500
+
+        @self.blueprint.route("/api/ai/radar", methods=["GET"])
+        @login.login_required_when_activated
+        def ai_radar():
+            instrument = flask.request.args.get("instrument", "BTC_USDT").upper()
+            try:
+                res = self.ai_engine.generate_radar_analysis(instrument=instrument)
+                return flask.jsonify(res)
+            except Exception as error:
+                return flask.jsonify({"error": str(error)}), 500
+
+        @self.blueprint.route("/api/ai/execute-action", methods=["POST"])
+        @login.login_required_when_activated
+        def ai_execute_action():
+            body = flask.request.get_json(silent=True) or {}
+            action = body.get("action_card") or body
+            try:
+                instrument = str(action.get("instrument", "BTC_USDT")).upper()
+                side = str(action.get("side", "BUY")).upper()
+                order_type = str(action.get("order_type", "MARKET")).upper()
+                quantity = float(action.get("quantity", 0))
+                price = float(action.get("price")) if action.get("price") is not None else None
+
+                if not instrument or not side or quantity <= 0:
+                    return flask.jsonify({"error": "Invalid action parameters"}), 400
+
+                order = self.service.execute_order(
+                    instrument=instrument,
+                    side=side,
+                    order_type=order_type,
+                    quantity=quantity,
+                    price=price,
+                )
+                return flask.jsonify({"status": "ok", "order": order})
             except Exception as error:
                 return flask.jsonify({"error": str(error)}), 500

@@ -25,6 +25,9 @@
     dcaStop: root.dataset.dcaStopUrl,
     radarStart: root.dataset.radarStartUrl,
     radarStop: root.dataset.radarStopUrl,
+    aiCopilot: root.dataset.aiCopilotUrl,
+    aiRadar: root.dataset.aiRadarUrl,
+    aiExecute: root.dataset.aiExecuteUrl,
   };
 
   // State
@@ -66,18 +69,22 @@
     setupCanvas();
     setupStrategies();
     setupSettingsModal();
+    setupCopilot();
+    setupRadarTab();
 
     await fetchStatus();
     await refreshMarket();
     await refreshPortfolio();
     await refreshOrders();
     await refreshStrategies();
+    await refreshRadar();
 
     // Start polling intervals
     setInterval(refreshMarket, 3500);
     setInterval(refreshPortfolio, 7000);
     setInterval(refreshOrders, 6000);
     setInterval(refreshStrategies, 10000);
+    setInterval(() => refreshRadar(state.radarPair || "BTC_USDT"), 15000);
   }
 
   // --- Tabs Navigation ---
@@ -902,6 +909,307 @@
         toast("Error stopping Radar bot: " + e.message, "error");
       }
     });
+  }
+
+  // --- AI Copilot ("Talk to Trade") ---
+  function setupCopilot() {
+    const trigger = $("btn-toggle-copilot");
+    const drawer = $("copilot-drawer");
+    const closeBtn = $("btn-close-copilot");
+    const form = $("copilot-form");
+    const input = $("copilot-input");
+
+    trigger?.addEventListener("click", () => {
+      drawer.classList.toggle("active");
+      if (drawer.classList.contains("active")) {
+        input?.focus();
+      }
+    });
+
+    closeBtn?.addEventListener("click", () => {
+      drawer.classList.remove("active");
+    });
+
+    // Quick chip buttons
+    document.querySelectorAll(".copilot-chip").forEach((chip) => {
+      chip.addEventListener("click", () => {
+        const prompt = chip.dataset.prompt;
+        if (!prompt) return;
+        input.value = prompt;
+        form.dispatchEvent(new Event("submit"));
+      });
+    });
+
+    // Form submit
+    form?.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const prompt = input.value.trim();
+      if (!prompt) return;
+      input.value = "";
+
+      // Append User message
+      appendCopilotMessage("user", prompt);
+
+      // Append Thinking bubble
+      const thinkingEl = appendCopilotMessage("assistant", `<em><i class="fas fa-spinner fa-spin text-gold mr-1"></i> Analyzing market & compiling response…</em>`);
+
+      try {
+        const res = await fetch(URLS.aiCopilot, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ prompt, instrument: state.pair }),
+        });
+        const data = await res.json();
+        thinkingEl.remove();
+
+        if (res.ok) {
+          appendCopilotAssistantResponse(data.reply, data.action_card);
+          if (data.provider) {
+            const provTag = $("copilot-provider-tag");
+            if (provTag) provTag.textContent = data.provider === "openai" ? "Codex / OpenAI" : (data.provider === "gemini" ? "Antigravity AI" : "AI Ready");
+          }
+        } else {
+          appendCopilotMessage("assistant", `<span class="text-danger"><i class="fas fa-exclamation-circle mr-1"></i> ${data.error || "Copilot encountered an issue processing request."}</span>`);
+        }
+      } catch (err) {
+        thinkingEl.remove();
+        appendCopilotMessage("assistant", `<span class="text-danger"><i class="fas fa-triangle-exclamation mr-1"></i> Failed to connect: ${err.message}</span>`);
+      }
+    });
+  }
+
+  function appendCopilotMessage(sender, htmlContent) {
+    const body = $("copilot-chat-body");
+    if (!body) return null;
+    const msg = document.createElement("div");
+    msg.className = `copilot-msg ${sender}`;
+    msg.innerHTML = `<div class="msg-bubble">${htmlContent}</div>`;
+    body.appendChild(msg);
+    body.scrollTop = body.scrollHeight;
+    return msg;
+  }
+
+  function appendCopilotAssistantResponse(markdownReply, actionCard) {
+    const body = $("copilot-chat-body");
+    if (!body) return;
+
+    // Basic markdown conversion
+    let formatted = (markdownReply || "")
+      .replace(/^### (.*$)/gim, '<strong class="text-gold d-block mb-1">$1</strong>')
+      .replace(/^## (.*$)/gim, '<strong class="text-gold d-block mb-1">$1</strong>')
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.*?)\*/g, '<em>$1</em>')
+      .replace(/\n\n/g, '<p class="mb-2"></p>')
+      .replace(/\n/g, '<br>');
+
+    let actionCardHtml = "";
+    const actionId = "action-" + Date.now();
+    if (actionCard && actionCard.type === "TRADE") {
+      const sideBadge = actionCard.side === "BUY" ? "badge-success" : "badge-danger";
+      const priceDisplay = actionCard.order_type === "LIMIT" && actionCard.price ? `$${actionCard.price.toLocaleString()}` : "Best Market Ask/Bid";
+
+      actionCardHtml = `
+        <div class="copilot-action-card mt-2">
+          <div class="action-card-header">
+            <div>
+              <span class="badge ${sideBadge} mr-1 font-weight-bold">${actionCard.side}</span>
+              <span class="badge badge-dark">${actionCard.order_type}</span>
+            </div>
+            <strong class="text-white">${actionCard.instrument}</strong>
+          </div>
+          <div class="action-param-grid">
+            <div class="action-param">Quantity: <strong>${actionCard.quantity}</strong></div>
+            <div class="action-param">Price: <strong>${priceDisplay}</strong></div>
+            <div class="action-param">Total Value: <strong>$${actionCard.notional_usdt.toLocaleString()} USDT</strong></div>
+            <div class="action-param">Mode: <strong class="text-gold">${state.mode.toUpperCase()}</strong></div>
+          </div>
+          <button class="btn-confirm-action" id="${actionId}">
+            <i class="fas fa-bolt"></i> Confirm & Execute Trade
+          </button>
+        </div>
+      `;
+    }
+
+    const msg = document.createElement("div");
+    msg.className = "copilot-msg assistant";
+    msg.innerHTML = `<div class="msg-bubble">${formatted}${actionCardHtml}</div>`;
+    body.appendChild(msg);
+    body.scrollTop = body.scrollHeight;
+
+    // Attach click handler to Action Card execution button
+    if (actionCard && $(actionId)) {
+      $(actionId).addEventListener("click", async () => {
+        const btn = $(actionId);
+        btn.disabled = true;
+        btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Submitting to Crypto.com…`;
+
+        try {
+          const res = await fetch(URLS.aiExecute, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(actionCard),
+          });
+          const data = await res.json();
+          if (res.ok) {
+            btn.className = "btn-confirm-action bg-success text-white";
+            btn.innerHTML = `<i class="fas fa-check-circle"></i> Executed Successfully!`;
+            toast(`⚡ ${actionCard.side} order executed via Copilot!`, "success");
+            refreshPortfolio();
+            refreshOrders();
+          } else {
+            btn.disabled = false;
+            btn.innerHTML = `<i class="fas fa-triangle-exclamation"></i> Retry Execution`;
+            toast(data.error || "Execution failed", "error");
+          }
+        } catch (e) {
+          btn.disabled = false;
+          btn.innerHTML = `<i class="fas fa-triangle-exclamation"></i> Error - Retry`;
+          toast("Action execution error: " + e.message, "error");
+        }
+      });
+    }
+  }
+
+  // --- AI Radar & Technical Analyst ---
+  function setupRadarTab() {
+    state.radarPair = "BTC_USDT";
+
+    // Pair selection chips
+    document.querySelectorAll("#radar-pair-selector button").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll("#radar-pair-selector button").forEach((b) => b.classList.remove("active"));
+        btn.classList.add("active");
+        state.radarPair = btn.dataset.pair;
+        refreshRadar(state.radarPair);
+      });
+    });
+
+    // Manual Refresh button
+    $("btn-refresh-radar")?.addEventListener("click", () => {
+      refreshRadar(state.radarPair);
+    });
+
+    // Apply Setup to Order Form
+    $("btn-apply-radar-setup")?.addEventListener("click", () => {
+      if (!state.currentRadarSetup) return;
+      const setup = state.currentRadarSetup;
+
+      // Switch to Terminal tab
+      document.querySelectorAll(".tab-link").forEach((b) => {
+        if (b.dataset.tab === "terminal") b.click();
+      });
+
+      // Switch pair if different
+      const pairChip = $(`chip-${setup.instrument}`) || document.querySelector(`.pair-chip[data-pair="${setup.instrument}"]`);
+      if (pairChip) pairChip.click();
+
+      // Set side to BUY (or SELL depending on signal)
+      if (setup.signal === "DEFENSIVE" || setup.signal === "TAKE PROFIT") {
+        $("btn-side-sell")?.click();
+      } else {
+        $("btn-side-buy")?.click();
+      }
+
+      // Select Limit
+      document.querySelectorAll(".order-type-group .btn-type").forEach((b) => {
+        if (b.dataset.type === "LIMIT") b.click();
+      });
+
+      // Set price
+      if ($("order-price")) {
+        $("order-price").value = setup.levels.recommended_entry || setup.last_price;
+      }
+
+      // Set 15% quantity
+      const avail = state.balances["USDT"] || 1000;
+      const entryPx = setup.levels.recommended_entry || setup.last_price;
+      if (entryPx > 0 && $("order-qty")) {
+        $("order-qty").value = ((avail * 0.15) / entryPx).toFixed(5);
+      }
+
+      recalcOrderSummary();
+      toast(`🎯 Applied AI Radar setup (${setup.instrument} @ $${entryPx.toLocaleString()}) to Order Form!`, "success");
+    });
+  }
+
+  async function refreshRadar(pair = state.radarPair || "BTC_USDT") {
+    try {
+      const url = `${URLS.aiRadar}?instrument=${encodeURIComponent(pair)}`;
+      const res = await fetch(url);
+      if (!res.ok) return;
+      const data = await res.json();
+      state.currentRadarSetup = data;
+
+      // Render Symbol & Badge
+      const symEl = $("radar-symbol");
+      if (symEl) symEl.textContent = data.instrument;
+
+      const badge = $("radar-signal-badge");
+      if (badge) {
+        badge.className = "radar-signal-pill " + (data.signal.toLowerCase().replace(" ", "-"));
+        badge.textContent = data.signal;
+      }
+
+      // Confidence
+      const confVal = $("radar-confidence-val");
+      const confBar = $("radar-confidence-bar");
+      if (confVal) confVal.textContent = `${data.confidence}%`;
+      if (confBar) confBar.style.width = `${data.confidence}%`;
+
+      const lastScan = $("radar-last-scan-time");
+      if (lastScan) lastScan.textContent = "Scanned " + new Date(data.timestamp * 1000).toLocaleTimeString();
+
+      // Liquidity / Depth
+      const depthRatio = $("radar-depth-ratio");
+      if (depthRatio) depthRatio.textContent = `${data.depth_ratio.toFixed(2)}x`;
+      const depthStatus = $("radar-depth-status");
+      if (depthStatus) depthStatus.textContent = data.depth_ratio >= 1.0 ? "Buyer Dominated" : "Seller Dominated";
+
+      const bidPct = Math.min(85, Math.max(15, (data.depth_ratio / (data.depth_ratio + 1)) * 100));
+      const bidsBar = $("radar-depth-bids");
+      const asksBar = $("radar-depth-asks");
+      if (bidsBar) bidsBar.style.width = `${bidPct}%`;
+      if (asksBar) asksBar.style.width = `${100 - bidPct}%`;
+
+      const spreadVal = $("radar-spread-val");
+      if (spreadVal) spreadVal.textContent = data.indicators.spread.value;
+
+      // Indicators
+      const rsiVal = $("radar-rsi-val");
+      if (rsiVal) rsiVal.textContent = `${data.rsi_14} (${data.indicators.rsi.status})`;
+      const atrVal = $("radar-atr-val");
+      if (atrVal) atrVal.textContent = data.indicators.volatility_range.value;
+      const chgVal = $("radar-change-val");
+      if (chgVal) {
+        chgVal.textContent = `${data.change_24h >= 0 ? "+" : ""}${data.change_24h.toFixed(2)}%`;
+        chgVal.className = data.change_24h >= 0 ? "font-weight-bold text-success" : "font-weight-bold text-danger";
+      }
+      const pxVal = $("radar-price-val");
+      if (pxVal) pxVal.textContent = `$${data.last_price.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+
+      // Targets
+      const r2 = $("target-r2");
+      const r1 = $("target-r1");
+      const entry = $("target-entry");
+      const s1 = $("target-s1");
+      const s2 = $("target-s2");
+      const sl = $("target-sl");
+
+      if (r2) r2.textContent = `$${data.levels.resistance_2.toLocaleString()}`;
+      if (r1) r1.textContent = `$${data.levels.resistance_1.toLocaleString()}`;
+      if (entry) entry.textContent = `$${data.levels.recommended_entry.toLocaleString()}`;
+      if (s1) s1.textContent = `$${data.levels.support_1.toLocaleString()}`;
+      if (s2) s2.textContent = `$${data.levels.support_2.toLocaleString()}`;
+      if (sl) sl.textContent = `$${data.levels.stop_loss.toLocaleString()}`;
+
+      // Narrative
+      const narr = $("radar-narrative-text");
+      if (narr) {
+        narr.innerHTML = data.narrative.replace(/\*\*(.*?)\*\*/g, '<strong class="text-gold">$1</strong>');
+      }
+    } catch (e) {
+      console.error("AI Radar fetch error", e);
+    }
   }
 
   // --- Settings Modal & API Credentials ---

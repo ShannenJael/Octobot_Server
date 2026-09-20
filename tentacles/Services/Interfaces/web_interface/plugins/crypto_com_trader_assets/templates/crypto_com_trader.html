@@ -26,7 +26,10 @@
       data-dca-start-url="{{ url_for('crypto_com_trader.start_dca') }}"
       data-dca-stop-url="{{ url_for('crypto_com_trader.stop_dca') }}"
       data-radar-start-url="{{ url_for('crypto_com_trader.start_radar') }}"
-      data-radar-stop-url="{{ url_for('crypto_com_trader.stop_radar') }}">
+      data-radar-stop-url="{{ url_for('crypto_com_trader.stop_radar') }}"
+      data-ai-copilot-url="{{ url_for('crypto_com_trader.ai_copilot') }}"
+      data-ai-radar-url="{{ url_for('crypto_com_trader.ai_radar') }}"
+      data-ai-execute-url="{{ url_for('crypto_com_trader.ai_execute_action') }}">
 
     <!-- Top Navigation Header & Status Bar -->
     <header class="trader-hero">
@@ -254,54 +257,166 @@
         </div>
     </div>
 
-    <!-- TAB 2: AI Radar Momentum Strategy -->
+    <!-- TAB 2: AI Radar & Technical Analyst -->
     <div class="tab-pane mt-3" id="tab-radar" style="display:none;">
         <div class="strategy-banner mb-3">
-            <div class="d-flex justify-content-between align-items-center">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
                 <div>
-                    <h2><i class="fas fa-radar text-gold mr-2"></i>Multi-Timeframe Radar Momentum Bot</h2>
-                    <p class="text-muted mb-0">Continuously scores Crypto.com markets across 1h, 4h, and 1D candles to execute automated trend momentum trades.</p>
+                    <h2><i class="fas fa-satellite-dish text-gold mr-2"></i>AI Market Radar & Technical Analyst</h2>
+                    <p class="text-muted mb-0">Autonomous multi-factor algorithmic engine synthesizing Order Book Depth, Candlestick Momentum, RSI, and Dynamic Breakout Targets.</p>
                 </div>
-                <div class="status-indicator">
-                    <span class="bot-badge" id="radar-bot-badge">STOPPED</span>
+                <div class="d-flex align-items-center gap-2">
+                    <div class="btn-group btn-group-sm" id="radar-pair-selector">
+                        <button class="btn btn-dark active" data-pair="BTC_USDT">BTC</button>
+                        <button class="btn btn-dark" data-pair="ETH_USDT">ETH</button>
+                        <button class="btn btn-dark" data-pair="SOL_USDT">SOL</button>
+                        <button class="btn btn-dark" data-pair="CRO_USDT">CRO</button>
+                        <button class="btn btn-dark" data-pair="DOGE_USDT">DOGE</button>
+                    </div>
+                    <button class="btn btn-sm btn-gold" id="btn-refresh-radar"><i class="fas fa-sync-alt mr-1"></i> Scan Now</button>
                 </div>
             </div>
         </div>
 
-        <div class="row">
+        <!-- Radar Metric Cards -->
+        <div class="row mb-3">
+            <!-- Signal Card -->
             <div class="col-lg-4 mb-3">
-                <div class="card trader-card p-4">
-                    <h4 class="text-gold mb-3">Strategy Parameters</h4>
-                    <div class="form-group">
-                        <label>Minimum Buy Score (50 - 95)</label>
-                        <input type="number" class="form-control trader-input" id="radar-buy-score" value="75" min="50" max="95">
-                        <small class="text-muted">Triggers order when multi-timeframe score exceeds threshold.</small>
+                <div class="card trader-card p-3 h-100 radar-signal-card text-center">
+                    <div class="text-muted small text-uppercase letter-spacing-1 mb-2">Overall Market Bias (<span id="radar-symbol">BTC_USDT</span>)</div>
+                    <div class="my-2">
+                        <span class="radar-signal-pill" id="radar-signal-badge">ANALYZING…</span>
                     </div>
-                    <div class="form-group">
-                        <label>Maximum Sell Score (10 - 50)</label>
-                        <input type="number" class="form-control trader-input" id="radar-sell-score" value="40" min="10" max="50">
-                        <small class="text-muted">Triggers exit when score drops below threshold.</small>
+                    <div class="confidence-box mt-3">
+                        <div class="d-flex justify-content-between small text-muted mb-1">
+                            <span>AI Confidence Score</span>
+                            <strong class="text-white" id="radar-confidence-val">--%</strong>
+                        </div>
+                        <div class="progress progress-dark" style="height: 8px;">
+                            <div class="progress-bar bg-gold" id="radar-confidence-bar" style="width: 0%;"></div>
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <label>Order Size per Signal (USDT)</label>
-                        <input type="number" class="form-control trader-input" id="radar-order-size" value="50" min="10">
+                    <div class="small text-muted mt-2" id="radar-last-scan-time">Updated just now</div>
+                </div>
+            </div>
+
+            <!-- Liquidity & Depth Card -->
+            <div class="col-lg-4 mb-3">
+                <div class="card trader-card p-3 h-100">
+                    <div class="text-muted small text-uppercase letter-spacing-1 mb-2"><i class="fas fa-layer-group text-info mr-1"></i> Order Book Pressure</div>
+                    <div class="d-flex justify-content-between align-items-baseline mb-2">
+                        <h3 class="mb-0 font-weight-bold" id="radar-depth-ratio">--</h3>
+                        <span class="badge badge-dark" id="radar-depth-status">Calculating…</span>
                     </div>
-                    <div class="form-group">
-                        <label>Target Universe</label>
-                        <input type="text" class="form-control trader-input" id="radar-universe" value="BTC_USDT, ETH_USDT, CRO_USDT, SOL_USDT">
-                        <small class="text-muted">Comma-separated liquid USDT markets.</small>
+                    <div class="progress progress-dark mb-2" style="height: 10px;">
+                        <div class="progress-bar bg-success" id="radar-depth-bids" style="width: 50%;" title="Bids"></div>
+                        <div class="progress-bar bg-danger" id="radar-depth-asks" style="width: 50%;" title="Asks"></div>
                     </div>
-                    <div class="d-flex gap-2 mt-3">
-                        <button class="btn btn-gold w-100" id="btn-start-radar"><i class="fas fa-play"></i> Start Radar Bot</button>
-                        <button class="btn btn-outline-danger w-100" id="btn-stop-radar" disabled><i class="fas fa-stop"></i> Stop</button>
+                    <div class="d-flex justify-content-between small text-muted">
+                        <span><i class="fas fa-arrow-up text-success mr-1"></i>Bid Depth</span>
+                        <span>Ask Depth<i class="fas fa-arrow-down text-danger ml-1"></i></span>
+                    </div>
+                    <div class="mt-3 pt-2 border-top border-secondary d-flex justify-content-between small">
+                        <span class="text-muted">Spread:</span>
+                        <strong class="text-white" id="radar-spread-val">-- bps</strong>
                     </div>
                 </div>
             </div>
-            <div class="col-lg-8 mb-3">
-                <div class="card trader-card p-4">
-                    <h4 class="text-gold mb-3">Live Opportunity Signals</h4>
-                    <div class="radar-live-signals" id="radar-signals-list">
-                        <div class="alert alert-dark text-muted text-center py-4">Waiting for radar scanner signals…</div>
+
+            <!-- Key Indicators Card -->
+            <div class="col-lg-4 mb-3">
+                <div class="card trader-card p-3 h-100">
+                    <div class="text-muted small text-uppercase letter-spacing-1 mb-2"><i class="fas fa-chart-line text-warning mr-1"></i> Technical Indicators</div>
+                    <div class="radar-indicator-row">
+                        <span>14-Period RSI:</span>
+                        <span class="font-weight-bold" id="radar-rsi-val">--</span>
+                    </div>
+                    <div class="radar-indicator-row">
+                        <span>Volatility ATR:</span>
+                        <span class="font-weight-bold" id="radar-atr-val">--</span>
+                    </div>
+                    <div class="radar-indicator-row">
+                        <span>24h Price Change:</span>
+                        <span class="font-weight-bold" id="radar-change-val">--</span>
+                    </div>
+                    <div class="radar-indicator-row">
+                        <span>Current Price:</span>
+                        <span class="font-weight-bold text-gold" id="radar-price-val">--</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Price Targets & Narrative Row -->
+        <div class="row mb-3">
+            <!-- Dynamic Targets Grid -->
+            <div class="col-lg-7 mb-3">
+                <div class="card trader-card p-4 h-100">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h4 class="text-gold mb-0"><i class="fas fa-crosshairs mr-2"></i>Dynamic Price Targets & Setup</h4>
+                        <span class="badge badge-secondary">Algorithmic</span>
+                    </div>
+
+                    <div class="targets-grid">
+                        <div class="target-item resistance">
+                            <div class="target-label">Resistance 2 (R2)</div>
+                            <div class="target-price" id="target-r2">$--</div>
+                            <div class="target-desc">Secondary Breakout Target</div>
+                        </div>
+                        <div class="target-item resistance">
+                            <div class="target-label">Resistance 1 (R1)</div>
+                            <div class="target-price" id="target-r1">$--</div>
+                            <div class="target-desc">Immediate Overhead Supply</div>
+                        </div>
+                        <div class="target-item entry active">
+                            <div class="target-label">Recommended Entry</div>
+                            <div class="target-price" id="target-entry">$--</div>
+                            <div class="target-desc">Optimal Accumulation Zone</div>
+                        </div>
+                        <div class="target-item support">
+                            <div class="target-label">Support 1 (S1)</div>
+                            <div class="target-price" id="target-s1">$--</div>
+                            <div class="target-desc">Key Structural Floor</div>
+                        </div>
+                        <div class="target-item support">
+                            <div class="target-label">Support 2 (S2)</div>
+                            <div class="target-price" id="target-s2">$--</div>
+                            <div class="target-desc">Major Liquidity Pool</div>
+                        </div>
+                        <div class="target-item stoploss">
+                            <div class="target-label">Stop-Loss Target</div>
+                            <div class="target-price" id="target-sl">$--</div>
+                            <div class="target-desc">Risk Mitigation Cutoff</div>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 pt-3 border-top border-secondary d-flex gap-2">
+                        <button class="btn btn-gold w-100" id="btn-apply-radar-setup">
+                            <i class="fas fa-bolt mr-1"></i> Apply Setup to Order Form
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Narrative Synthesis & Bot Controls -->
+            <div class="col-lg-5 mb-3">
+                <div class="card trader-card p-4 h-100 d-flex flex-column justify-content-between">
+                    <div>
+                        <h4 class="text-gold mb-3"><i class="fas fa-brain mr-2"></i>AI Technical Synthesis</h4>
+                        <div class="radar-narrative-box mb-3" id="radar-narrative-text">
+                            Loading AI market analysis narrative…
+                        </div>
+                    </div>
+
+                    <div class="radar-bot-quick-box p-3 rounded">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="font-weight-bold text-white"><i class="fas fa-robot text-gold mr-1"></i> Automated Momentum Bot</span>
+                            <span class="bot-badge" id="radar-bot-badge">STOPPED</span>
+                        </div>
+                        <div class="d-flex gap-2 mt-2">
+                            <button class="btn btn-sm btn-outline-warning w-100" id="btn-start-radar"><i class="fas fa-play mr-1"></i> Start Bot</button>
+                            <button class="btn btn-sm btn-outline-danger w-100" id="btn-stop-radar" disabled><i class="fas fa-stop mr-1"></i> Stop</button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -488,6 +603,56 @@
                     </tbody>
                 </table>
             </div>
+        </div>
+    </div>
+
+    <!-- Floating AI Copilot Trigger Button -->
+    <button class="btn-copilot-trigger" id="btn-toggle-copilot" title="Open AI Trading Copilot">
+        <i class="fas fa-wand-magic-sparkles text-gold"></i>
+        <span>AI Copilot</span>
+        <span class="copilot-pulse-dot"></span>
+    </button>
+
+    <!-- AI Copilot Sliding Drawer -->
+    <div class="copilot-drawer" id="copilot-drawer">
+        <div class="copilot-header">
+            <div class="d-flex align-items-center">
+                <div class="copilot-avatar mr-2"><i class="fas fa-brain text-gold"></i></div>
+                <div>
+                    <h5 class="mb-0 text-white font-weight-bold">Crypto.com Copilot</h5>
+                    <small class="text-muted"><span class="badge badge-success-soft">● Online</span> <span id="copilot-provider-tag">AI Ready</span></small>
+                </div>
+            </div>
+            <button class="btn-copilot-close" id="btn-close-copilot"><i class="fas fa-times"></i></button>
+        </div>
+
+        <div class="copilot-quick-chips">
+            <button class="copilot-chip" data-prompt="Analyze current market momentum for BTC">📊 Analyze BTC</button>
+            <button class="copilot-chip" data-prompt="Buy $100 worth of BTC at market">⚡ Buy $100 BTC</button>
+            <button class="copilot-chip" data-prompt="What is my available balance and PnL?">💼 My Balances</button>
+            <button class="copilot-chip" data-prompt="Suggest an optimal limit buy entry for BTC">🎯 Suggest Entry</button>
+        </div>
+
+        <div class="copilot-body" id="copilot-chat-body">
+            <div class="copilot-msg assistant">
+                <div class="msg-bubble">
+                    <p class="mb-1"><strong>Hello! I am your Crypto.com Trading Copilot.</strong></p>
+                    <p class="mb-0 text-muted">You can ask me to analyze live order books, check your portfolio, or tell me to trade (e.g. <em>"Buy $100 BTC"</em> or <em>"Limit sell 0.05 BTC at $90,000"</em>). What would you like to do?</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="copilot-footer">
+            <form id="copilot-form" onsubmit="return false;">
+                <div class="input-group">
+                    <input type="text" class="form-control trader-input" id="copilot-input" placeholder="Ask AI or type a trade command..." autocomplete="off">
+                    <div class="input-group-append">
+                        <button class="btn btn-gold" type="submit" id="copilot-send-btn">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </div>
+                </div>
+            </form>
         </div>
     </div>
 
