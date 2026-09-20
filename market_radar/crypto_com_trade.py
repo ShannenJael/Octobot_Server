@@ -794,6 +794,421 @@ class TradingStrategyManager:
                             logger.warning("DCA buy failed: %s", e)
 
 
+class SecondsScalpManager:
+    """Manages ultra-short duration (seconds) scalping positions with real-time countdown, auto-settlement, and cashout."""
+
+    def __init__(
+        self,
+        client: CryptoComExchangeClient,
+        paper: PaperTradingEngine,
+        storage_dir: Optional[Path] = None,
+    ):
+        self.client = client
+        self.paper = paper
+        self.storage_dir = storage_dir or Path(os.getenv("MARKET_RADAR_DATA_DIR", "user/crypto_com_trader"))
+        self.file_path = self.storage_dir / "seconds_scalp_ledger.json"
+        self._lock = threading.Lock()
+        self.active_trades: List[Dict[str, Any]] = []
+        self.history: List[Dict[str, Any]] = []
+        self.running = True
+        self.autopilot = {
+            "enabled": False,
+            "engine": "antigravity",  # 'antigravity', 'codex', 'consensus'
+            "min_confidence": 72,
+            "stake_usdt": 15.0,
+            "duration_seconds": 30,
+            "instrument": "BTC_USDT",
+            "last_action": "Standby (Awaiting Activation)",
+            "last_check_time": 0,
+            "total_auto_trades": 0,
+        }
+        self._load()
+        self.worker_thread = threading.Thread(target=self._expiry_monitor_loop, daemon=True)
+        self.worker_thread.start()
+        self.autopilot_thread = threading.Thread(target=self._autopilot_loop, daemon=True)
+        self.autopilot_thread.start()
+
+    def _load(self) -> None:
+        try:
+            if self.file_path.exists():
+                with open(self.file_path, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                    self.active_trades = data.get("active_trades", [])
+                    self.history = data.get("history", [])
+        except Exception as e:
+            logger.warning("Failed to load seconds scalping ledger: %s", e)
+            self.active_trades = []
+            self.history = []
+
+    def _save(self) -> None:
+        try:
+            self.storage_dir.mkdir(parents=True, exist_ok=True)
+            temp = self.file_path.with_suffix(".tmp")
+            with open(temp, "w", encoding="utf-8") as f:
+                json.dump(
+                    {
+                        "active_trades": self.active_trades,
+                        "history": self.history[-200:],
+                        "updated_at": int(time.time()),
+                    },
+                    f,
+                    indent=2,
+                )
+            temp.replace(self.file_path)
+        except Exception as e:
+            logger.error("Failed to save seconds scalping ledger: %s", e)
+
+    def _get_current_price(self, instrument: str, side: str = "BUY", use_mid: bool = True) -> float:
+        try:
+            book = self.client.get_book(instrument, depth=5)
+            bids = book.get("bids", [])
+            asks = book.get("asks", [])
+            if use_mid and bids and asks:
+                return round((float(bids[0][0]) + float(asks[0][0])) / 2.0, 4)
+            if side.upper() == "BUY" and asks:
+                return float(asks[0][0])
+            elif side.upper() == "SELL" and bids:
+                return float(bids[0][0])
+            elif bids:
+                return float(bids[0][0])
+        except Exception:
+            pass
+        ticker = self.client.get_ticker(instrument)
+        px = float(ticker.get("k") or ticker.get("a") or ticker.get("b") or 0.0)
+        return px if px > 0 else 0.0
+
+    def open_seconds_trade(
+        self,
+        instrument: str,
+        direction: str,
+        stake_usdt: float,
+        duration_seconds: int = 30,
+        is_live: bool = False,
+        payout_ratio: float = 0.85,
+        leverage: float = 10.0,
+        ai_engine: str = "Manual",
+    ) -> Dict[str, Any]:
+        with self._lock:
+            instrument = instrument.upper().strip()
+            direction_clean = "CALL" if direction.upper() in ("CALL", "BUY", "LONG") else "PUT"
+            stake = round(float(stake_usdt), 2)
+            if stake <= 0:
+                raise ValueError("Stake amount must be greater than 0 USDT")
+            duration = int(duration_seconds)
+            if duration not in (15, 30, 60, 120, 300):
+                duration = max(10, min(duration, 600))
+
+            entry_price = self._get_current_price(instrument, use_mid=True)
+            if entry_price <= 0:
+                raise ValueError(f"Unable to retrieve real-time market price for {instrument}")
+
+            now = time.time()
+            trade_id = f"sec_{int(now * 1000)}"
+
+            # Balance verification & deduction
+            if not is_live:
+                avail_usdt = self.paper.balances.get("USDT", 0.0)
+                if avail_usdt < stake:
+                    raise ValueError(f"Insufficient virtual USDT. Needed: {stake:.2f}, Available: {avail_usdt:.2f}")
+                self.paper.balances["USDT"] = round(avail_usdt - stake, 4)
+                self.paper._save()
+            else:
+                if not self.client.has_credentials:
+                    raise ValueError("Live trading requires configured Crypto.com API credentials")
+                try:
+                    qty = round(stake / entry_price, 6)
+                    self.client.create_order(
+                        instrument=instrument,
+                        side="BUY" if direction_clean == "CALL" else "SELL",
+                        order_type="MARKET",
+                        quantity=qty,
+                    )
+                except Exception as e:
+                    logger.warning("Live order execution note for seconds trade: %s", e)
+
+            trade = {
+                "trade_id": trade_id,
+                "instrument": instrument,
+                "direction": direction_clean,
+                "stake_usdt": stake,
+                "duration_seconds": duration,
+                "entry_price": entry_price,
+                "current_price": entry_price,
+                "start_time": now,
+                "expiry_time": now + duration,
+                "is_live": is_live,
+                "status": "ACTIVE",
+                "payout_ratio": payout_ratio,
+                "leverage": leverage,
+                "ai_engine": ai_engine,
+                "pnl_usdt": 0.0,
+                "pnl_pct": 0.0,
+                "remaining_seconds": float(duration),
+                "exit_price": None,
+                "closed_at": None,
+                "reason": None,
+            }
+            self.active_trades.append(trade)
+            self._save()
+            return trade
+
+    def close_seconds_trade(self, trade_id: str, early_exit: bool = False) -> Dict[str, Any]:
+        with self._lock:
+            idx = next((i for i, t in enumerate(self.active_trades) if t["trade_id"] == trade_id), None)
+            if idx is None:
+                raise ValueError(f"Trade {trade_id} not found or already settled")
+
+            trade = self.active_trades.pop(idx)
+            instrument = trade["instrument"]
+            direction = trade["direction"]
+            stake = trade["stake_usdt"]
+            entry_px = trade["entry_price"]
+            payout_ratio = trade.get("payout_ratio", 0.85)
+            leverage = trade.get("leverage", 10.0)
+
+            exit_px = self._get_current_price(instrument, use_mid=True)
+            if exit_px <= 0:
+                exit_px = trade.get("current_price") or entry_px
+
+            if direction == "CALL":
+                delta_pct = ((exit_px - entry_px) / entry_px) * 100.0
+            else:
+                delta_pct = ((entry_px - exit_px) / entry_px) * 100.0
+
+            now = time.time()
+            if early_exit:
+                if delta_pct > 0:
+                    secured_ratio = 0.65
+                    pnl_usdt = round(stake * payout_ratio * secured_ratio, 2)
+                    status = "CASHED_OUT_PROFIT"
+                else:
+                    loss_pct = min(100.0, abs(delta_pct) * leverage)
+                    pnl_usdt = -round(stake * (loss_pct / 100.0) * 0.7, 2)
+                    status = "CASHED_OUT_SAVED"
+                reason = "EARLY_EXIT"
+            else:
+                if delta_pct > 0:
+                    profit_pct = max(payout_ratio * 100.0, delta_pct * leverage)
+                    pnl_usdt = round(stake * (profit_pct / 100.0), 2)
+                    status = "WIN"
+                elif delta_pct < 0:
+                    pnl_usdt = -round(stake, 2)
+                    status = "LOSS"
+                else:
+                    pnl_usdt = 0.0
+                    status = "TIE"
+                reason = "EXPIRED"
+
+            pnl_pct = round((pnl_usdt / stake) * 100.0, 2) if stake > 0 else 0.0
+
+            if not trade.get("is_live", False):
+                credit = max(0.0, stake + pnl_usdt)
+                self.paper.balances["USDT"] = round(self.paper.balances.get("USDT", 0.0) + credit, 4)
+                self.paper._save()
+            else:
+                try:
+                    qty = round(stake / exit_px, 6)
+                    self.client.create_order(
+                        instrument=instrument,
+                        side="SELL" if direction == "CALL" else "BUY",
+                        order_type="MARKET",
+                        quantity=qty,
+                    )
+                except Exception as e:
+                    logger.warning("Live counter-order error: %s", e)
+
+            trade.update({
+                "status": status,
+                "exit_price": exit_px,
+                "pnl_usdt": pnl_usdt,
+                "pnl_pct": pnl_pct,
+                "closed_at": int(now),
+                "reason": reason,
+                "remaining_seconds": 0,
+            })
+            self.history.insert(0, trade)
+            if len(self.history) > 200:
+                self.history = self.history[:200]
+            self._save()
+            return trade
+
+    def _expiry_monitor_loop(self) -> None:
+        while self.running:
+            try:
+                now = time.time()
+                to_close = []
+                with self._lock:
+                    for trade in self.active_trades:
+                        if now >= trade["expiry_time"]:
+                            to_close.append(trade["trade_id"])
+                for tid in to_close:
+                    try:
+                        self.close_seconds_trade(tid, early_exit=False)
+                    except Exception as err:
+                        logger.error("Error auto-closing seconds trade %s: %s", tid, err)
+            except Exception as loop_err:
+                logger.error("SecondsScalp monitor loop exception: %s", loop_err)
+            time.sleep(0.25)
+
+    def get_active_trades(self) -> List[Dict[str, Any]]:
+        now = time.time()
+        results = []
+        with self._lock:
+            for t in self.active_trades:
+                copy_t = dict(t)
+                rem = max(0.0, round(copy_t["expiry_time"] - now, 1))
+                copy_t["remaining_seconds"] = rem
+                entry_px = copy_t["entry_price"]
+                direction = copy_t["direction"]
+                stake = copy_t["stake_usdt"]
+                payout_ratio = copy_t.get("payout_ratio", 0.85)
+
+                cur_px = self._get_current_price(copy_t["instrument"], use_mid=True)
+                if cur_px <= 0:
+                    cur_px = entry_px
+                copy_t["current_price"] = cur_px
+
+                if direction == "CALL":
+                    delta_pct = ((cur_px - entry_px) / entry_px) * 100.0
+                else:
+                    delta_pct = ((entry_px - cur_px) / entry_px) * 100.0
+
+                if delta_pct > 0:
+                    floating_pnl = round(stake * payout_ratio, 2)
+                    floating_pct = round(payout_ratio * 100.0, 1)
+                    cashout_val = round(stake + (floating_pnl * 0.65), 2)
+                else:
+                    floating_pnl = -round(stake, 2)
+                    floating_pct = -100.0
+                    cashout_val = max(0.0, round(stake * 0.35, 2))
+
+                copy_t["delta_pct"] = round(delta_pct, 3)
+                copy_t["floating_pnl_usdt"] = floating_pnl
+                copy_t["floating_pnl_pct"] = floating_pct
+                copy_t["cashout_value_usdt"] = cashout_val
+                results.append(copy_t)
+        return results
+
+    def get_history(self) -> Dict[str, Any]:
+        with self._lock:
+            total_trades = len(self.history)
+            wins = sum(1 for t in self.history if t.get("pnl_usdt", 0) > 0)
+            losses = sum(1 for t in self.history if t.get("pnl_usdt", 0) < 0)
+            total_pnl = sum(t.get("pnl_usdt", 0) for t in self.history)
+            win_rate = round((wins / total_trades) * 100.0, 1) if total_trades > 0 else 0.0
+
+            return {
+                "total_trades": total_trades,
+                "wins": wins,
+                "losses": losses,
+                "win_rate_pct": win_rate,
+                "total_pnl_usdt": round(total_pnl, 2),
+                "trades": self.history[:50],
+            }
+
+    def toggle_autopilot(
+        self,
+        enabled: bool,
+        engine: Optional[str] = None,
+        min_confidence: Optional[int] = None,
+        stake: Optional[float] = None,
+        duration: Optional[int] = None,
+        instrument: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        with self._lock:
+            self.autopilot["enabled"] = bool(enabled)
+            if engine:
+                self.autopilot["engine"] = engine.lower().strip()
+            if min_confidence is not None:
+                self.autopilot["min_confidence"] = int(min_confidence)
+            if stake is not None:
+                self.autopilot["stake_usdt"] = max(1.0, round(float(stake), 2))
+            if duration is not None:
+                self.autopilot["duration_seconds"] = int(duration)
+            if instrument:
+                self.autopilot["instrument"] = instrument.upper().strip()
+            self.autopilot["last_action"] = "Auto-Pilot Active (Scanning)" if self.autopilot["enabled"] else "Auto-Pilot Stopped"
+            return dict(self.autopilot)
+
+    def get_autopilot_status(self) -> Dict[str, Any]:
+        with self._lock:
+            return dict(self.autopilot)
+
+    def _autopilot_loop(self) -> None:
+        from market_radar.crypto_com_ai import CryptoComAIEngine
+        from market_radar.crypto_com_trade import CryptoComTraderService
+        ai_engine = CryptoComAIEngine(CryptoComTraderService.get_instance())
+        last_eval_time = 0.0
+        last_settle_time = 0.0
+
+        while self.running:
+            try:
+                time.sleep(1.0)
+                with self._lock:
+                    is_enabled = self.autopilot["enabled"]
+                    engine_name = self.autopilot["engine"]
+                    min_conf = self.autopilot["min_confidence"]
+                    stake = self.autopilot["stake_usdt"]
+                    dur = self.autopilot["duration_seconds"]
+                    pair = self.autopilot["instrument"]
+                    has_active = len(self.active_trades) > 0
+
+                if not is_enabled:
+                    continue
+
+                # Safety guard: strictly max 1 concurrent position
+                if has_active:
+                    last_settle_time = time.time()
+                    with self._lock:
+                        self.autopilot["last_action"] = "In-flight trade running; waiting for settlement"
+                    continue
+
+                now = time.time()
+                # Cooldown period after trade closure to avoid overtrading in chop
+                if now - last_settle_time < 8.0:
+                    wait_rem = int(8.0 - (now - last_settle_time))
+                    with self._lock:
+                        self.autopilot["last_action"] = f"Post-trade cooldown ({wait_rem}s)..."
+                    continue
+
+                if now - last_eval_time < 6.0:
+                    continue
+                last_eval_time = now
+
+                with self._lock:
+                    self.autopilot["last_action"] = f"Scanning {pair} via {engine_name.upper()}..."
+                    self.autopilot["last_check_time"] = int(now)
+
+                advice = ai_engine.generate_seconds_advice(pair, provider=engine_name)
+                direction = advice.get("direction", "CALL").upper()
+                prob = int(advice.get("probability", 0))
+
+                if prob >= min_conf and direction in ("CALL", "PUT"):
+                    engine_label = "Codex AI" if "codex" in engine_name else ("Dual Consensus" if "consensus" in engine_name else "Antigravity AI")
+                    try:
+                        self.open_seconds_trade(
+                            instrument=pair,
+                            direction=direction,
+                            stake_usdt=stake,
+                            duration_seconds=dur,
+                            is_live=False,  # default paper safety
+                            ai_engine=engine_label,
+                        )
+                        with self._lock:
+                            self.autopilot["total_auto_trades"] += 1
+                            self.autopilot["last_action"] = f"Launched {direction} ({prob}%) via {engine_label}"
+                        logger.info("Auto-Pilot executed %s %s on %s (Confidence: %d%%)", engine_label, direction, pair, prob)
+                    except Exception as trade_err:
+                        with self._lock:
+                            self.autopilot["last_action"] = f"Trade trigger error: {trade_err}"
+                else:
+                    with self._lock:
+                        self.autopilot["last_action"] = f"Filtered {direction} ({prob}%) < {min_conf}% trigger threshold"
+
+            except Exception as loop_err:
+                logger.debug("Autopilot loop error: %s", loop_err)
+
+
 class CryptoComTraderService:
     """Singleton service bridging Crypto.com Exchange API, Paper Engine, and OctoBot."""
 
@@ -809,8 +1224,15 @@ class CryptoComTraderService:
         self.client = CryptoComExchangeClient()
         self.paper = PaperTradingEngine()
         self.strategy_mgr = TradingStrategyManager(self.client, self.paper)
+        self.seconds_mgr = SecondsScalpManager(self.client, self.paper)
         self.mode = "paper"  # 'paper' or 'live'
         self._lock = threading.Lock()
+
+    def toggle_seconds_autopilot(self, **kwargs) -> Dict[str, Any]:
+        return self.seconds_mgr.toggle_autopilot(**kwargs)
+
+    def get_seconds_autopilot_status(self) -> Dict[str, Any]:
+        return self.seconds_mgr.get_autopilot_status()
 
     def set_mode(self, mode: str) -> str:
         with self._lock:
@@ -821,6 +1243,16 @@ class CryptoComTraderService:
                 raise ValueError("Cannot switch to live mode without Crypto.com API credentials")
             self.mode = mode
             return self.mode
+
+    def reset_paper(self, usdt_amount: float = 10000.0) -> Dict[str, Any]:
+        res = self.paper.reset_balances(usdt_amount)
+        if hasattr(self, "seconds_mgr") and self.seconds_mgr:
+            with self.seconds_mgr._lock:
+                self.seconds_mgr.active_trades = []
+                self.seconds_mgr.history = []
+                self.seconds_mgr.autopilot["total_auto_trades"] = 0
+                self.seconds_mgr._save()
+        return res
 
     def set_credentials(self, api_key: str, api_secret: str) -> Dict[str, Any]:
         self.client.set_credentials(api_key, api_secret)

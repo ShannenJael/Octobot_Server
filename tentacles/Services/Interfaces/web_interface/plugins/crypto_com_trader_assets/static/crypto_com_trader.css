@@ -274,6 +274,15 @@
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
+/* Tab Panes */
+.tab-pane {
+  display: none;
+}
+
+.tab-pane.active {
+  display: block !important;
+}
+
 /* Tab 1: Terminal Grid */
 .terminal-grid {
   display: grid;
@@ -1108,3 +1117,318 @@
   background: rgba(20, 27, 40, 0.6);
   border: 1px solid rgba(212, 175, 55, 0.15);
 }
+
+/* ==========================================================================
+   SECONDS SCALPER STYLES
+   ========================================================================== */
+.seconds-advisor-card,
+.seconds-console-card {
+  background: linear-gradient(135deg, rgba(20, 26, 40, 0.75), rgba(12, 16, 26, 0.9));
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+}
+
+.seconds-signal-display {
+  background: rgba(10, 14, 22, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+}
+
+.seconds-signal-pill {
+  display: inline-block;
+  font-family: var(--font-heading);
+  font-size: 1.5rem;
+  font-weight: 900;
+  padding: 0.5rem 1.6rem;
+  border-radius: 30px;
+  letter-spacing: 0.05em;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+}
+
+.seconds-signal-pill.signal-call {
+  background: linear-gradient(135deg, #00e676, #00b0ff);
+  color: #05140b;
+  box-shadow: 0 0 25px rgba(0, 230, 118, 0.4);
+  animation: pulse-call 2s infinite ease-in-out;
+}
+
+.seconds-signal-pill.signal-put {
+  background: linear-gradient(135deg, #ff334b, #ff79b0);
+  color: #fff;
+  box-shadow: 0 0 25px rgba(255, 51, 75, 0.4);
+  animation: pulse-put 2s infinite ease-in-out;
+}
+
+@keyframes pulse-call {
+  0%, 100% { transform: scale(1); box-shadow: 0 0 20px rgba(0, 230, 118, 0.35); }
+  50% { transform: scale(1.03); box-shadow: 0 0 32px rgba(0, 230, 118, 0.65); }
+}
+
+@keyframes pulse-put {
+  0%, 100% { transform: scale(1); box-shadow: 0 0 20px rgba(255, 51, 75, 0.35); }
+  50% { transform: scale(1.03); box-shadow: 0 0 32px rgba(255, 51, 75, 0.65); }
+}
+
+.bg-gradient-success {
+  background: linear-gradient(90deg, #00b0ff, #00e676);
+}
+
+.seconds-rationale-box {
+  background: rgba(14, 18, 27, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+  font-size: 0.86rem;
+  color: var(--text-main);
+  line-height: 1.5;
+}
+
+.seconds-duration-group .btn {
+  background: rgba(18, 24, 38, 0.8);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: var(--text-muted);
+  font-weight: 600;
+  font-size: 0.85rem;
+  padding: 0.45rem 0.5rem;
+  transition: all 0.2s ease;
+}
+
+.seconds-duration-group .btn.active,
+.seconds-duration-group .btn:hover {
+  background: var(--gold);
+  border-color: var(--gold);
+  color: #070709;
+  box-shadow: 0 0 12px rgba(212, 175, 55, 0.4);
+}
+
+.seconds-quick-chips .sec-chip {
+  flex: 1;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  border-color: rgba(255, 255, 255, 0.12);
+  color: var(--text-muted);
+  transition: all 0.2s ease;
+}
+
+.seconds-quick-chips .sec-chip.active,
+.seconds-quick-chips .sec-chip:hover {
+  background: rgba(212, 175, 55, 0.15);
+  border-color: var(--gold);
+  color: var(--gold);
+}
+
+.payout-indicator-box {
+  background: rgba(15, 21, 32, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Flash Execution Buttons */
+.btn-flash-call {
+  background: linear-gradient(135deg, #00c853, #00e676);
+  border: none;
+  border-radius: 10px;
+  color: #041407;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 6px 20px rgba(0, 230, 118, 0.35);
+}
+
+.btn-flash-call:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 28px rgba(0, 230, 118, 0.55);
+}
+
+.btn-flash-call:active {
+  transform: translateY(1px);
+}
+
+.btn-flash-put {
+  background: linear-gradient(135deg, #d50000, #ff334b);
+  border: none;
+  border-radius: 10px;
+  color: #ffffff;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 6px 20px rgba(255, 51, 75, 0.35);
+}
+
+.btn-flash-put:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 28px rgba(255, 51, 75, 0.55);
+}
+
+.btn-flash-put:active {
+  transform: translateY(1px);
+}
+
+.flash-btn-title {
+  font-family: var(--font-heading);
+  font-size: 1.15rem;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+}
+
+.flash-btn-sub {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  opacity: 0.85;
+}
+
+/* Active Scalps Cards Grid */
+.seconds-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 1.25rem;
+}
+
+.seconds-active-card {
+  background: linear-gradient(135deg, rgba(22, 29, 44, 0.85), rgba(14, 18, 28, 0.95));
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 1.25rem;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+}
+
+.seconds-active-card.call-card {
+  border-left: 4px solid #00e676;
+}
+
+.seconds-active-card.put-card {
+  border-left: 4px solid #ff334b;
+}
+
+.svg-countdown-wrap {
+  position: relative;
+  width: 90px;
+  height: 90px;
+}
+
+.svg-countdown-wrap svg {
+  transform: rotate(-90deg);
+}
+
+.countdown-bg-circle {
+  stroke: rgba(255, 255, 255, 0.1);
+  stroke-width: 6;
+  fill: none;
+}
+
+.countdown-progress-circle {
+  stroke: var(--gold);
+  stroke-width: 6;
+  fill: none;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.25s linear;
+}
+
+.countdown-number {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-family: var(--font-mono);
+  font-size: 1.3rem;
+  font-weight: 900;
+  color: #fff;
+}
+
+.btn-cashout-early {
+  background: rgba(212, 175, 55, 0.15);
+  border: 1px solid var(--gold);
+  color: var(--gold);
+  font-weight: 700;
+  font-size: 0.82rem;
+  border-radius: 6px;
+  padding: 0.4rem 0.8rem;
+  transition: all 0.2s ease;
+}
+
+.btn-cashout-early:hover {
+  background: var(--gold);
+  color: #070709;
+  box-shadow: 0 0 14px rgba(212, 175, 55, 0.5);
+}
+
+.badge-scalp-win {
+  background: rgba(0, 230, 118, 0.18);
+  color: #00e676;
+  border: 1px solid rgba(0, 230, 118, 0.4);
+  font-weight: 700;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+}
+
+.badge-scalp-loss {
+  background: rgba(255, 51, 75, 0.18);
+  color: #ff334b;
+  border: 1px solid rgba(255, 51, 75, 0.4);
+  font-weight: 700;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+}
+
+.badge-scalp-cashed {
+  background: rgba(212, 175, 55, 0.18);
+  color: var(--gold);
+  border: 1px solid rgba(212, 175, 55, 0.4);
+  font-weight: 700;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+}
+
+/* TradingView & Multi-AI Auto-Pilot Styling */
+.border-warning-subtle {
+  border-color: rgba(212, 175, 55, 0.35) !important;
+}
+
+#tradingview_seconds_container {
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.autopilot-status-box {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.4) !important;
+}
+
+.badge-autopilot-active {
+  background: rgba(0, 230, 118, 0.2);
+  color: #00e676;
+  border: 1px solid rgba(0, 230, 118, 0.5);
+  animation: pulse-autopilot 2s infinite;
+}
+
+@keyframes pulse-autopilot {
+  0% { box-shadow: 0 0 0 0 rgba(0, 230, 118, 0.6); }
+  70% { box-shadow: 0 0 0 10px rgba(0, 230, 118, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(0, 230, 118, 0); }
+}
+
+.badge-ai-antigravity {
+  background: rgba(255, 193, 7, 0.15);
+  color: #ffc107;
+  border: 1px solid rgba(255, 193, 7, 0.35);
+  font-weight: 600;
+}
+
+.badge-ai-codex {
+  background: rgba(23, 162, 184, 0.15);
+  color: #17a2b8;
+  border: 1px solid rgba(23, 162, 184, 0.35);
+  font-weight: 600;
+}
+
+.badge-ai-consensus {
+  background: rgba(0, 230, 118, 0.15);
+  color: #00e676;
+  border: 1px solid rgba(0, 230, 118, 0.35);
+  font-weight: 600;
+}
+
+

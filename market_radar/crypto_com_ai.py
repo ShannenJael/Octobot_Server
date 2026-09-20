@@ -537,3 +537,285 @@ class CryptoComAIEngine:
             return 100.0
         rs = avg_gain / avg_loss
         return round(100.0 - (100.0 / (1.0 + rs)), 1)
+
+    # -------------------------------------------------------------------------
+    # Seconds Scalper AI Micro-Advisor (Antigravity & Codex)
+    # -------------------------------------------------------------------------
+    def _call_antigravity_seconds(
+        self,
+        instrument: str,
+        last_price: float,
+        depth_ratio: float,
+        taker_ratio: float,
+        micro_delta: float = 0.0,
+        micro_pct: float = 0.0,
+    ) -> Optional[Dict[str, Any]]:
+        gemini_key = os.getenv("ANTIGRAVITY_API_KEY") or os.getenv("GEMINI_API_KEY")
+        if not gemini_key or gemini_key.startswith("AQ.placeholder"):
+            return None
+        try:
+            model = os.getenv("ANTIGRAVITY_MODEL", "gemini-3.6-flash")
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={gemini_key}"
+            prompt = (
+                f"You are a quant high-frequency scalper analyzing {instrument} at ${last_price:,.2f}.\n"
+                f"Orderbook Bid/Ask Volume Depth Skew: {depth_ratio:.2f}x ({'Bid dominant' if depth_ratio >= 1.0 else 'Ask dominant'}).\n"
+                f"Taker Buy/Sell Flow: {taker_ratio:.2f}x.\n"
+                f"Recent Micro-Tick Price Trajectory: {micro_delta:+.2f} USDT ({micro_pct:+.3f}%).\n"
+                "TASK: Predict micro-trend direction for the next 30 to 60 seconds ('CALL' for upward micro tick surge, 'PUT' for downward dump).\n"
+                "RULES:\n"
+                "- Do NOT bias toward CALL. If micro-momentum is negative or asks dominate, predict PUT.\n"
+                "- If indicators conflict or market is in flat chop, output probability 48-60.\n"
+                "- Only output probability >= 70 when orderbook skew and micro-momentum firmly align.\n"
+                "Output JSON with keys: 'direction' ('CALL' or 'PUT'), 'probability' (integer 45-88), "
+                "'duration' (30 or 60), and 'rationale' (1 concise sentence)."
+            )
+            payload = {
+                "contents": [{"parts": [{"text": prompt}]}],
+                "generationConfig": {"responseMimeType": "application/json"},
+            }
+            req = urllib.request.Request(
+                url,
+                data=json.dumps(payload).encode("utf-8"),
+                headers={"Content-Type": "application/json"},
+                method="POST",
+            )
+            with urllib.request.urlopen(req, timeout=6) as res:
+                res_data = json.loads(res.read().decode("utf-8"))
+                text = res_data["candidates"][0]["content"]["parts"][0]["text"].strip()
+                if text.startswith("```json"):
+                    text = text[7:]
+                if text.startswith("```"):
+                    text = text[3:]
+                if text.endswith("```"):
+                    text = text[:-3]
+                parsed = json.loads(text.strip())
+                return {
+                    "instrument": instrument,
+                    "direction": str(parsed.get("direction", "CALL")).upper(),
+                    "probability": int(parsed.get("probability", 70)),
+                    "duration": int(parsed.get("duration", 30)),
+                    "last_price": last_price,
+                    "depth_ratio": depth_ratio,
+                    "taker_ratio": taker_ratio,
+                    "micro_delta": micro_delta,
+                    "rationale": parsed.get("rationale", f"Order book depth ratio of {depth_ratio:.2f}x and micro-momentum {micro_delta:+.2f} favor {parsed.get('direction', 'CALL')}."),
+                    "provider": "antigravity",
+                    "model": model,
+                    "timestamp": time.time(),
+                }
+        except Exception as e:
+            logger.debug("Antigravity micro-advice error: %s", e)
+            return None
+
+    def _call_codex_seconds(
+        self,
+        instrument: str,
+        last_price: float,
+        depth_ratio: float,
+        taker_ratio: float,
+        micro_delta: float = 0.0,
+        micro_pct: float = 0.0,
+    ) -> Optional[Dict[str, Any]]:
+        openai_key = os.getenv("CODEX_API_KEY") or os.getenv("OPENAI_API_KEY")
+        if not openai_key or openai_key.startswith("sk-proj-placeholder"):
+            return None
+        openai_base = os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1").rstrip("/")
+        model = os.getenv("CODEX_MODEL") or os.getenv("OPENAI_MODEL", "gpt-4o")
+        url = f"{openai_base}/chat/completions"
+        system_prompt = (
+            "You are an unbiased ultra-high-frequency quantitative scalping AI predicting 30s-60s micro-trends on Crypto.com. "
+            "You MUST treat CALL and PUT with equal objective weight based purely on the data. "
+            "Respond strictly in JSON format with keys: 'direction' ('CALL' or 'PUT'), 'probability' (integer 45-88), "
+            "'duration' (integer 30 or 60), and 'rationale' (concise 1-sentence explanation)."
+        )
+        user_prompt = (
+            f"Instrument: {instrument}\n"
+            f"Current Mid Price: ${last_price:,.2f}\n"
+            f"Orderbook Bid/Ask Depth Skew: {depth_ratio:.2f}x ({'Bids Dominant' if depth_ratio >= 1.0 else 'Asks Dominant'})\n"
+            f"Recent Taker Volume Flow: {taker_ratio:.2f}x buy-to-sell ratio\n"
+            f"Recent Micro-Tick Trajectory (last 25 trades): {micro_delta:+.2f} USDT ({micro_pct:+.3f}%)\n\n"
+            "RULES:\n"
+            "1. If micro-momentum is negative ({micro_delta:+.2f} < 0) or ask depth dominates (< 0.95x), PREDICT PUT.\n"
+            "2. If micro-momentum is positive ({micro_delta:+.2f} > 0) and bid depth dominates (> 1.05x), PREDICT CALL.\n"
+            "3. If signals conflict (e.g. positive ticks but heavy asks) or the market is flat/choppy, keep probability low (50-60%) so the auto-pilot avoids entering low-conviction chop.\n"
+            "Predict micro-trend direction for the next 30-60 seconds."
+        )
+        payload = {
+            "model": model,
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt}
+            ],
+            "response_format": {"type": "json_object"},
+            "temperature": 0.15,
+            "max_tokens": 150
+        }
+        req = urllib.request.Request(
+            url,
+            data=json.dumps(payload).encode("utf-8"),
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {openai_key}"
+            },
+            method="POST"
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=6) as res:
+                data = json.loads(res.read().decode("utf-8"))
+                content = data["choices"][0]["message"]["content"]
+                parsed = json.loads(content.strip())
+                return {
+                    "instrument": instrument,
+                    "direction": str(parsed.get("direction", "CALL")).upper(),
+                    "probability": int(parsed.get("probability", 70)),
+                    "duration": int(parsed.get("duration", 30)),
+                    "last_price": last_price,
+                    "depth_ratio": depth_ratio,
+                    "taker_ratio": taker_ratio,
+                    "micro_delta": micro_delta,
+                    "rationale": parsed.get("rationale", f"Codex AI evaluates depth skew of {depth_ratio:.2f}x and tick trajectory {micro_delta:+.2f} on {instrument}."),
+                    "provider": "codex",
+                    "model": model,
+                    "timestamp": time.time(),
+                }
+        except Exception as e:
+            logger.debug("Codex micro-advice error: %s", e)
+            return None
+
+    def generate_seconds_advice(self, instrument: str = "BTC_USDT", provider: str = "auto") -> Dict[str, Any]:
+        """Generate ultra-short-term (30s-120s) micro-direction prediction and orderbook tape advice.
+
+        Supported providers: 'antigravity', 'codex', 'consensus', 'auto'
+        """
+        self._ensure_env_loaded()
+
+        if not self.trade_service:
+            try:
+                from market_radar.crypto_com_trade import CryptoComTraderService
+                self.trade_service = CryptoComTraderService.get_instance()
+            except Exception:
+                pass
+
+        context = self._get_market_context(instrument)
+        last_price = context.get("last_price", 81000.0)
+        depth_ratio = context.get("depth_bid_ask_ratio", 1.0)
+
+        # Micro-tape flow analysis and tick trajectory from live trades
+        taker_ratio = 1.0
+        micro_delta = 0.0
+        micro_pct = 0.0
+        if self.trade_service:
+            try:
+                overview = self.trade_service.get_market_overview(instrument)
+                trades = overview.get("trades") or overview.get("recent_trades") or []
+                if trades:
+                    buy_vol = sum(float(t.get("q", 0)) for t in trades if str(t.get("s", "")).lower() == "buy")
+                    sell_vol = sum(float(t.get("q", 0)) for t in trades if str(t.get("s", "")).lower() == "sell")
+                    if sell_vol > 0:
+                        taker_ratio = round(buy_vol / sell_vol, 2)
+                    elif buy_vol > 0:
+                        taker_ratio = 2.5
+                    if len(trades) >= 2:
+                        p_now = float(trades[0].get("p", last_price))
+                        p_old = float(trades[-1].get("p", last_price))
+                        micro_delta = round(p_now - p_old, 2)
+                        micro_pct = round((micro_delta / p_old) * 100.0, 4) if p_old > 0 else 0.0
+            except Exception:
+                pass
+
+        req_prov = provider.lower() if provider else "auto"
+
+        # 1. Dual AI Consensus
+        if req_prov == "consensus":
+            anti = self._call_antigravity_seconds(instrument, last_price, depth_ratio, taker_ratio, micro_delta, micro_pct)
+            codex = self._call_codex_seconds(instrument, last_price, depth_ratio, taker_ratio, micro_delta, micro_pct)
+            if anti and codex:
+                is_agreed = anti["direction"] == codex["direction"]
+                if is_agreed:
+                    combined_prob = min(92, round((anti["probability"] + codex["probability"]) / 2 + 4))
+                    return {
+                        "instrument": instrument,
+                        "direction": anti["direction"],
+                        "probability": combined_prob,
+                        "duration": 30,
+                        "last_price": last_price,
+                        "depth_ratio": depth_ratio,
+                        "taker_ratio": taker_ratio,
+                        "micro_delta": micro_delta,
+                        "rationale": f"Dual Consensus: Antigravity ({anti['probability']}%) & Codex ({codex['probability']}%) both confirm {anti['direction']}.",
+                        "provider": "consensus",
+                        "anti_dir": anti["direction"],
+                        "codex_dir": codex["direction"],
+                        "timestamp": time.time(),
+                    }
+                else:
+                    favored = anti if anti["probability"] >= codex["probability"] else codex
+                    return {
+                        "instrument": instrument,
+                        "direction": favored["direction"],
+                        "probability": 55,  # Low probability on divergence to filter out chop
+                        "duration": 30,
+                        "last_price": last_price,
+                        "depth_ratio": depth_ratio,
+                        "taker_ratio": taker_ratio,
+                        "micro_delta": micro_delta,
+                        "rationale": f"Divergence: Antigravity leans {anti['direction']} ({anti['probability']}%), Codex leans {codex['direction']} ({codex['probability']}%). Caution advised.",
+                        "provider": "consensus",
+                        "anti_dir": anti["direction"],
+                        "codex_dir": codex["direction"],
+                        "timestamp": time.time(),
+                    }
+            elif codex:
+                return codex
+            elif anti:
+                return anti
+
+        # 2. Codex Requested Specifically
+        if req_prov == "codex":
+            codex_res = self._call_codex_seconds(instrument, last_price, depth_ratio, taker_ratio, micro_delta, micro_pct)
+            if codex_res:
+                return codex_res
+
+        # 3. Antigravity Requested Specifically
+        if req_prov == "antigravity":
+            anti_res = self._call_antigravity_seconds(instrument, last_price, depth_ratio, taker_ratio, micro_delta, micro_pct)
+            if anti_res:
+                return anti_res
+
+        # 4. Auto: Try Antigravity first, then Codex
+        if req_prov == "auto":
+            anti_res = self._call_antigravity_seconds(instrument, last_price, depth_ratio, taker_ratio, micro_delta, micro_pct)
+            if anti_res:
+                return anti_res
+            codex_res = self._call_codex_seconds(instrument, last_price, depth_ratio, taker_ratio, micro_delta, micro_pct)
+            if codex_res:
+                return codex_res
+
+        # 5. Quantitative tape fallback
+        score = (depth_ratio * 0.5) + (taker_ratio * 0.3) + (1.0 if micro_delta > 0 else (-1.0 if micro_delta < 0 else 0.0)) * 0.2
+        if score >= 1.25 or (depth_ratio > 1.3 and micro_delta >= 0):
+            direction = "CALL"
+            prob = min(85, int(66 + (score - 1.25) * 20))
+            reason = f"Buyer absorption ({depth_ratio:.2f}x bid wall) and positive tick momentum ({micro_delta:+.2f}); upward surge expected."
+        elif score <= 0.75 or (depth_ratio < 0.8 and micro_delta <= 0):
+            direction = "PUT"
+            prob = min(85, int(66 + (0.75 - score) * 20))
+            reason = f"Seller supply dominates ({depth_ratio:.2f}x asks) and negative tick momentum ({micro_delta:+.2f}); downward dump expected."
+        else:
+            direction = "CALL" if (micro_delta > 0 or depth_ratio >= 1.0) else "PUT"
+            prob = 54  # Intentionally low probability in neutral/chop zone to filter out unprofitable auto-trades
+            reason = f"Consolidating market (spread balanced, micro-momentum {micro_delta:+.2f}). Waiting for directional breakout."
+
+        return {
+            "instrument": instrument,
+            "direction": direction,
+            "probability": prob,
+            "duration": 30,
+            "last_price": last_price,
+            "depth_ratio": depth_ratio,
+            "taker_ratio": taker_ratio,
+            "micro_delta": micro_delta,
+            "rationale": reason,
+            "provider": "quantitative-tape",
+            "timestamp": time.time(),
+        }

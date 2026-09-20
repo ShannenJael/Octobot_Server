@@ -28,6 +28,13 @@
     aiCopilot: root.dataset.aiCopilotUrl,
     aiRadar: root.dataset.aiRadarUrl,
     aiExecute: root.dataset.aiExecuteUrl,
+    secondsAdvice: "/crypto-com/api/seconds/advice",
+    secondsTrade: "/crypto-com/api/seconds/trade",
+    secondsActive: "/crypto-com/api/seconds/active",
+    secondsCashout: "/crypto-com/api/seconds/cashout",
+    secondsHistory: "/crypto-com/api/seconds/history",
+    secondsAutopilotStatus: "/crypto-com/api/seconds/autopilot/status",
+    secondsAutopilotToggle: "/crypto-com/api/seconds/autopilot/toggle",
   };
 
   // State
@@ -43,6 +50,13 @@
     balances: { USDT: 10000 },
     candles: [],
     strategies: {},
+    secondsPair: "BTC_USDT",
+    secondsDuration: 30,
+    secondsStake: 10,
+    secondsAiEngine: "antigravity", // 'antigravity', 'codex', 'consensus'
+    tvInterval: "1",
+    autopilotEnabled: false,
+    autopilotConfidence: 72,
   };
 
   const $ = (id) => document.getElementById(id);
@@ -71,6 +85,7 @@
     setupSettingsModal();
     setupCopilot();
     setupRadarTab();
+    setupSecondsScalper();
 
     await fetchStatus();
     await refreshMarket();
@@ -78,6 +93,11 @@
     await refreshOrders();
     await refreshStrategies();
     await refreshRadar();
+    await refreshSecondsAdvice();
+    await refreshSecondsActive();
+    await refreshSecondsHistory();
+    await refreshAutopilotStatus();
+    renderTradingViewSecondsChart(state.secondsPair, state.tvInterval);
 
     // Start polling intervals
     setInterval(refreshMarket, 3500);
@@ -85,20 +105,48 @@
     setInterval(refreshOrders, 6000);
     setInterval(refreshStrategies, 10000);
     setInterval(() => refreshRadar(state.radarPair || "BTC_USDT"), 15000);
+    setInterval(() => refreshSecondsAdvice(state.secondsPair || "BTC_USDT"), 4500);
+    setInterval(refreshSecondsActive, 1000);
+    setInterval(refreshSecondsHistory, 5000);
+    setInterval(refreshAutopilotStatus, 3500);
   }
 
   // --- Tabs Navigation ---
   function setupTabs() {
+    function activateTab(tabName) {
+      console.log("[CryptoCom] Switching to tab:", tabName);
+      document.querySelectorAll(".tab-link").forEach((b) => {
+        if (b.dataset.tab === tabName) {
+          b.classList.add("active");
+        } else {
+          b.classList.remove("active");
+        }
+      });
+      document.querySelectorAll(".tab-pane").forEach((p) => {
+        p.classList.remove("active");
+        p.style.display = "none";
+      });
+      const target = $(`tab-${tabName}`);
+      if (target) {
+        target.classList.add("active");
+        target.style.display = "block";
+        if (tabName === "terminal") drawChart();
+        if (tabName === "seconds") {
+          renderTradingViewSecondsChart(state.secondsPair, state.tvInterval);
+          refreshAutopilotStatus();
+          refreshSecondsAdvice();
+          refreshSecondsActive();
+          refreshSecondsHistory();
+        }
+      } else {
+        console.error("[CryptoCom] Target tab not found: tab-" + tabName);
+      }
+    }
+    window.switchCryptoTraderTab = activateTab;
+
     document.querySelectorAll(".tab-link").forEach((btn) => {
       btn.addEventListener("click", () => {
-        document.querySelectorAll(".tab-link").forEach((b) => b.classList.remove("active"));
-        document.querySelectorAll(".tab-pane").forEach((p) => (p.style.display = "none"));
-        btn.classList.add("active");
-        const target = $(`tab-${btn.dataset.tab}`);
-        if (target) {
-          target.style.display = "block";
-          if (btn.dataset.tab === "terminal") drawChart();
-        }
+        activateTab(btn.dataset.tab);
       });
     });
 
@@ -1212,6 +1260,564 @@
     }
   }
 
+  // --- Seconds Scalper (AI Fast-Cycle Trading & TradingView & Auto-Pilot) ---
+  function renderTradingViewSecondsChart(pair = state.secondsPair || "BTC_USDT", interval = state.tvInterval || "1") {
+    const container = $("tradingview_seconds_chart");
+    if (!container) return;
+
+    const cleanPair = pair.replace("_", "");
+    const tvSymbol = `BINANCE:${cleanPair}`;
+    const lbl = $("tv-seconds-symbol-lbl");
+    if (lbl) lbl.textContent = `${tvSymbol} • ${interval}m`;
+
+    container.innerHTML = "";
+    if (typeof TradingView !== "undefined") {
+      try {
+        new TradingView.widget({
+          autosize: true,
+          symbol: tvSymbol,
+          interval: interval,
+          timezone: "Etc/UTC",
+          theme: "dark",
+          style: "1",
+          locale: "en",
+          toolbar_bg: "#070709",
+          enable_publishing: false,
+          hide_side_toolbar: false,
+          allow_symbol_change: true,
+          container_id: "tradingview_seconds_chart",
+        });
+        return;
+      } catch (e) {
+        console.warn("TradingView widget init error:", e);
+      }
+    }
+
+    const iframe = document.createElement("iframe");
+    iframe.style.width = "100%";
+    iframe.style.height = "100%";
+    iframe.style.border = "none";
+    iframe.src = `https://s.tradingview.com/widgetembed/?symbol=${encodeURIComponent(tvSymbol)}&interval=${interval}&theme=dark&style=1&locale=en`;
+    container.appendChild(iframe);
+  }
+  window.renderTradingViewSecondsChart = renderTradingViewSecondsChart;
+
+  async function refreshAutopilotStatus() {
+    try {
+      const res = await fetch(URLS.secondsAutopilotStatus);
+      if (!res.ok) return;
+      const data = await res.json();
+      state.autopilotEnabled = Boolean(data.enabled);
+
+      const badge = $("sec-autopilot-badge");
+      if (badge) {
+        if (data.enabled) {
+          badge.textContent = `ACTIVE (${(data.engine || 'antigravity').toUpperCase()})`;
+          badge.className = "badge badge-autopilot-active ml-2";
+        } else {
+          badge.textContent = "STANDBY (OFF)";
+          badge.className = "badge badge-secondary ml-2";
+        }
+      }
+
+      const btnLabel = $("autopilot-toggle-label");
+      const btnToggle = $("btn-toggle-autopilot");
+      if (btnLabel && btnToggle) {
+        btnLabel.textContent = data.enabled ? "Stop Auto-Pilot" : "Start Auto-Pilot";
+        btnToggle.className = data.enabled ? "btn btn-sm btn-danger" : "btn btn-sm btn-outline-warning";
+      }
+
+      const narr = $("autopilot-status-narrative");
+      if (narr) {
+        const icon = data.enabled ? '<i class="fas fa-satellite-dish text-success mr-1"></i>' : '<i class="fas fa-pause text-muted mr-1"></i>';
+        narr.innerHTML = `${icon} ${data.last_action || 'Standby'}`;
+      }
+
+      const countEl = $("autopilot-total-trades");
+      if (countEl) countEl.textContent = data.total_auto_trades || 0;
+    } catch (e) {
+      console.debug("Autopilot status error:", e);
+    }
+  }
+
+  function setupSecondsScalper() {
+    // Pair selector buttons
+    document.querySelectorAll("#seconds-pair-selector button").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll("#seconds-pair-selector button").forEach((b) => b.classList.remove("active"));
+        btn.classList.add("active");
+        state.secondsPair = btn.dataset.pair || "BTC_USDT";
+        const sym = $("sec-active-symbol");
+        if (sym) sym.textContent = state.secondsPair;
+        renderTradingViewSecondsChart(state.secondsPair, state.tvInterval);
+        refreshSecondsAdvice(state.secondsPair, state.secondsAiEngine);
+      });
+    });
+
+    // TradingView Interval Selector
+    document.querySelectorAll("#tv-timeframe-selector button").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll("#tv-timeframe-selector button").forEach((b) => b.classList.remove("active"));
+        btn.classList.add("active");
+        state.tvInterval = btn.dataset.tf || "1";
+        renderTradingViewSecondsChart(state.secondsPair, state.tvInterval);
+      });
+    });
+
+    // AI Engine Selector
+    document.querySelectorAll("#seconds-ai-engine-selector button").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll("#seconds-ai-engine-selector button").forEach((b) => b.classList.remove("active"));
+        btn.classList.add("active");
+        state.secondsAiEngine = btn.dataset.engine || "antigravity";
+        const lbl = $("sec-model-lbl");
+        if (lbl) {
+          lbl.textContent = state.secondsAiEngine === "codex" ? "Codex AI" : (state.secondsAiEngine === "consensus" ? "Dual Consensus" : "Antigravity AI");
+        }
+        refreshSecondsAdvice(state.secondsPair, state.secondsAiEngine);
+      });
+    });
+
+    // Duration selector pills
+    document.querySelectorAll("#seconds-duration-group button").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll("#seconds-duration-group button").forEach((b) => b.classList.remove("active"));
+        btn.classList.add("active");
+        state.secondsDuration = parseInt(btn.dataset.duration) || 30;
+      });
+    });
+
+    // Quick Stake Chips
+    document.querySelectorAll(".sec-chip").forEach((chip) => {
+      chip.addEventListener("click", () => {
+        document.querySelectorAll(".sec-chip").forEach((c) => c.classList.remove("active"));
+        chip.classList.add("active");
+        const val = parseFloat(chip.dataset.stake) || 10;
+        state.secondsStake = val;
+        const input = $("seconds-stake-input");
+        if (input) input.value = val;
+        recalcSecondsPotential();
+      });
+    });
+
+    // Stake custom input
+    const stakeInput = $("seconds-stake-input");
+    if (stakeInput) {
+      stakeInput.addEventListener("input", () => {
+        const val = parseFloat(stakeInput.value) || 0;
+        state.secondsStake = val;
+        document.querySelectorAll(".sec-chip").forEach((c) => {
+          if (parseFloat(c.dataset.stake) === val) {
+            c.classList.add("active");
+          } else {
+            c.classList.remove("active");
+          }
+        });
+        recalcSecondsPotential();
+      });
+    }
+
+    function recalcSecondsPotential() {
+      const profitEl = $("sec-potential-profit");
+      if (profitEl) {
+        const stake = parseFloat($("seconds-stake-input")?.value) || 0;
+        const profit = stake * 0.85;
+        profitEl.textContent = `+$${profit.toFixed(2)} USDT`;
+      }
+    }
+
+    // Refresh advice manually
+    $("btn-refresh-seconds-advice")?.addEventListener("click", () => {
+      refreshSecondsAdvice(state.secondsPair, state.secondsAiEngine);
+      toast(`Scanned live market tape with ${state.secondsAiEngine.toUpperCase()}`, "info");
+    });
+
+    // FLASH CALL button
+    $("btn-flash-call")?.addEventListener("click", () => {
+      submitSecondsTrade("CALL");
+    });
+
+    // FLASH PUT button
+    $("btn-flash-put")?.addEventListener("click", () => {
+      submitSecondsTrade("PUT");
+    });
+
+    // Auto-Pilot Controls
+    $("btn-toggle-autopilot")?.addEventListener("click", async () => {
+      const willEnable = !state.autopilotEnabled;
+      const eng = $("autopilot-engine-select")?.value || state.secondsAiEngine;
+      const conf = state.autopilotConfidence || 72;
+      const stake = state.secondsStake || 10;
+      const dur = state.secondsDuration || 30;
+
+      try {
+        const res = await fetch(URLS.secondsAutopilotToggle, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            enabled: willEnable,
+            engine: eng,
+            min_confidence: conf,
+            stake_usdt: stake,
+            duration_seconds: dur,
+            instrument: state.secondsPair,
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok || data.error) throw new Error(data.error || "Failed to toggle Auto-Pilot");
+
+        state.autopilotEnabled = willEnable;
+        toast(willEnable ? "🤖 Autonomous AI Scalper ACTIVE!" : "⏸️ Auto-Pilot stopped.", willEnable ? "success" : "info");
+        await refreshAutopilotStatus();
+      } catch (err) {
+        toast(err.message, "error");
+      }
+    });
+
+    $("autopilot-engine-select")?.addEventListener("change", async (e) => {
+      if (state.autopilotEnabled) {
+        await fetch(URLS.secondsAutopilotToggle, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ enabled: true, engine: e.target.value }),
+        });
+        refreshAutopilotStatus();
+      }
+    });
+
+    document.querySelectorAll("#autopilot-conf-selector button").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        document.querySelectorAll("#autopilot-conf-selector button").forEach((b) => b.classList.remove("active"));
+        btn.classList.add("active");
+        state.autopilotConfidence = parseInt(btn.dataset.conf) || 72;
+        if (state.autopilotEnabled) {
+          await fetch(URLS.secondsAutopilotToggle, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ enabled: true, min_confidence: state.autopilotConfidence }),
+          });
+          refreshAutopilotStatus();
+        }
+      });
+    });
+  }
+
+  async function refreshSecondsAdvice(pair = state.secondsPair || "BTC_USDT", engine = state.secondsAiEngine || "antigravity") {
+    try {
+      const url = `${URLS.secondsAdvice}?instrument=${encodeURIComponent(pair)}&provider=${encodeURIComponent(engine)}`;
+      const res = await fetch(url);
+      if (!res.ok) return;
+      const data = await res.json();
+
+      const sym = $("sec-active-symbol");
+      if (sym) sym.textContent = data.instrument;
+
+      const modelLbl = $("sec-model-lbl");
+      if (modelLbl) {
+        const prov = (data.provider || engine).toLowerCase();
+        modelLbl.textContent = prov === "codex" ? "Codex AI" : (prov === "consensus" ? "Dual Consensus" : "Antigravity AI");
+      }
+
+      const dirPill = $("sec-signal-direction");
+      if (dirPill) {
+        if (data.direction === "CALL") {
+          dirPill.className = "seconds-signal-pill signal-call";
+          dirPill.textContent = "CALL / LONG 🚀";
+        } else {
+          dirPill.className = "seconds-signal-pill signal-put";
+          dirPill.textContent = "PUT / SHORT 🔻";
+        }
+      }
+
+      const probText = $("sec-prob-text");
+      const probBar = $("sec-prob-bar");
+      if (probText) probText.textContent = `${data.probability}%`;
+      if (probBar) {
+        probBar.style.width = `${data.probability}%`;
+        probBar.className = data.direction === "CALL" ? "progress-bar bg-gradient-success" : "progress-bar bg-danger";
+      }
+
+      const depthMetric = $("sec-metric-depth");
+      if (depthMetric) {
+        const d = data.depth_ratio || 1.0;
+        depthMetric.textContent = `${d.toFixed(2)}x ${d >= 1.0 ? "Bid" : "Ask"}`;
+      }
+
+      const takerMetric = $("sec-metric-taker");
+      if (takerMetric) {
+        const t = data.taker_ratio || 0.5;
+        takerMetric.textContent = `${Math.round(t * 100)}% Buy`;
+      }
+
+      const tickMetric = $("sec-metric-tick");
+      if (tickMetric) {
+        tickMetric.textContent = data.direction === "CALL" ? "Bullish ▲" : "Bearish ▼";
+        tickMetric.className = data.direction === "CALL" ? "font-weight-bold text-success" : "font-weight-bold text-danger";
+      }
+
+      const ratBox = $("sec-rationale-text");
+      if (ratBox) ratBox.textContent = data.rationale || "AI synthesizing real-time order flow…";
+
+      // Also update available USDT
+      const availEl = $("sec-avail-usdt");
+      if (availEl) {
+        const avail = state.balances["USDT"] || 0;
+        availEl.textContent = `$${avail.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+      }
+
+      const modeBadge = $("sec-mode-badge");
+      if (modeBadge) {
+        modeBadge.textContent = state.mode === "live" ? "LIVE REAL TRADING" : "PAPER SIMULATION";
+        modeBadge.className = state.mode === "live" ? "badge badge-danger" : "badge badge-info";
+      }
+    } catch (e) {
+      console.error("Seconds advice fetch error:", e);
+    }
+  }
+
+  async function submitSecondsTrade(direction) {
+    const stakeInput = $("seconds-stake-input");
+    const stake = parseFloat(stakeInput?.value) || 10;
+    if (stake <= 0) {
+      toast("Please enter a valid stake in USDT", "error");
+      return;
+    }
+
+    const duration = state.secondsDuration || 30;
+    const pair = state.secondsPair || "BTC_USDT";
+    const aiLabel = state.secondsAiEngine === "codex" ? "Codex AI" : (state.secondsAiEngine === "consensus" ? "Dual Consensus" : "Antigravity AI");
+
+    const btnCall = $("btn-flash-call");
+    const btnPut = $("btn-flash-put");
+    if (btnCall) btnCall.disabled = true;
+    if (btnPut) btnPut.disabled = true;
+
+    try {
+      const res = await fetch(URLS.secondsTrade, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          instrument: pair,
+          direction: direction,
+          stake_usdt: stake,
+          duration_seconds: duration,
+          ai_engine: aiLabel,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) {
+        throw new Error(data.error || "Failed to execute seconds scalp trade");
+      }
+
+      toast(`⚡ Flash ${direction} launched for ${duration}s on ${pair} (${aiLabel})!`, "success");
+      await refreshSecondsActive();
+      await refreshPortfolio();
+    } catch (err) {
+      toast(err.message, "error");
+    } finally {
+      if (btnCall) btnCall.disabled = false;
+      if (btnPut) btnPut.disabled = false;
+    }
+  }
+
+  async function refreshSecondsActive() {
+    try {
+      const res = await fetch(URLS.secondsActive);
+      if (!res.ok) return;
+      const data = await res.json();
+      const trades = data.active_trades || [];
+
+      const countBadge = $("sec-active-count-badge");
+      if (countBadge) {
+        countBadge.textContent = `${trades.length} Active`;
+        countBadge.className = trades.length > 0 ? "badge badge-warning ml-2" : "badge badge-dark ml-2";
+      }
+
+      const container = $("seconds-active-cards-container");
+      if (!container) return;
+
+      if (trades.length === 0) {
+        container.innerHTML = `
+          <div class="seconds-empty-state text-center py-4 w-100" id="seconds-empty-state">
+            <i class="fas fa-stopwatch text-muted fa-3x mb-3"></i>
+            <h5 class="text-white">No Active Seconds Scalps</h5>
+            <p class="text-muted small mb-0">Choose your stake and duration, then click <strong>FLASH CALL</strong> or <strong>FLASH PUT</strong> to begin a micro-cycle.</p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = trades
+        .map((t) => {
+          const isCall = t.direction === "CALL";
+          const dirColor = isCall ? "#00e676" : "#ff334b";
+          const cardClass = isCall ? "call-card" : "put-card";
+          const remSec = Math.max(0, Math.ceil(t.remaining_seconds));
+          const totalSec = t.duration_seconds || 30;
+          const pctRemaining = Math.max(0, Math.min(1, remSec / totalSec));
+          const radius = 36;
+          const circum = 2 * Math.PI * radius; // ~226.19
+          const strokeOffset = circum * (1 - pctRemaining);
+          const isProfit = t.floating_pnl_usdt > 0;
+          const pnlColorClass = isProfit ? "text-success" : "text-danger";
+          const pnlSign = isProfit ? "+" : "";
+
+          return `
+            <div class="seconds-active-card ${cardClass}" id="card-${t.trade_id}">
+              <div class="d-flex justify-content-between align-items-start mb-2">
+                <div>
+                  <span class="badge ${isCall ? "badge-success" : "badge-danger"} font-weight-bold mr-1">
+                    ${isCall ? "▲ CALL (LONG)" : "▼ PUT (SHORT)"}
+                  </span>
+                  <strong class="text-white font-mono">${t.instrument}</strong>
+                </div>
+                <span class="small text-muted font-mono font-weight-bold">$${t.stake_usdt.toFixed(2)} Stake</span>
+              </div>
+
+              <div class="d-flex align-items-center justify-content-between my-3">
+                <!-- Circular SVG Countdown -->
+                <div class="svg-countdown-wrap">
+                  <svg width="90" height="90">
+                    <circle class="countdown-bg-circle" cx="45" cy="45" r="36"></circle>
+                    <circle class="countdown-progress-circle" cx="45" cy="45" r="36"
+                      style="stroke: ${dirColor}; stroke-dasharray: ${circum}; stroke-dashoffset: ${strokeOffset};">
+                    </circle>
+                  </svg>
+                  <div class="countdown-number">${remSec}s</div>
+                </div>
+
+                <!-- Live Floating PnL & Tick Price -->
+                <div class="text-right flex-grow-1 ml-3">
+                  <div class="small text-muted mb-1">FLOATING PnL</div>
+                  <div class="h4 font-weight-bold ${pnlColorClass} mb-1 font-mono">
+                    ${pnlSign}$${t.floating_pnl_usdt.toFixed(2)} (${pnlSign}${t.floating_pnl_pct.toFixed(1)}%)
+                  </div>
+                  <div class="small font-mono text-muted">
+                    Entry: <span class="text-white">$${t.entry_price.toLocaleString()}</span>
+                  </div>
+                  <div class="small font-mono text-muted">
+                    Now: <span class="text-gold font-weight-bold">$${t.current_price.toLocaleString()}</span>
+                    <span class="${t.delta_pct >= 0 ? "text-success" : "text-danger"}">(${t.delta_pct >= 0 ? "▲ +" : "▼ "}${t.delta_pct.toFixed(2)}%)</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Early Cashout Action -->
+              <div class="d-flex justify-content-between align-items-center mt-2 pt-2 border-top border-secondary">
+                <span class="small text-muted">Auto-settles in <strong>${remSec}s</strong></span>
+                <button class="btn btn-sm btn-cashout-early" onclick="window.cashoutSecondsTrade('${t.trade_id}')">
+                  <i class="fas fa-hand-holding-dollar mr-1"></i> Cash Out ($${t.cashout_value_usdt.toFixed(2)})
+                </button>
+              </div>
+            </div>
+          `;
+        })
+        .join("");
+    } catch (e) {
+      console.error("Seconds active trades fetch error:", e);
+    }
+  }
+
+  async function cashoutSecondsTrade(tradeId) {
+    if (!tradeId) return;
+    try {
+      const res = await fetch(URLS.secondsCashout, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ trade_id: tradeId }),
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) {
+        throw new Error(data.error || "Cashout failed");
+      }
+      toast(`💰 Cashed out early! Secured $${data.trade.pnl_usdt >= 0 ? '+' : ''}${data.trade.pnl_usdt.toFixed(2)} USDT`, "success");
+      await refreshSecondsActive();
+      await refreshSecondsHistory();
+      await refreshPortfolio();
+    } catch (err) {
+      toast(err.message, "error");
+    }
+  }
+  window.cashoutSecondsTrade = cashoutSecondsTrade;
+
+  async function refreshSecondsHistory() {
+    try {
+      const res = await fetch(URLS.secondsHistory);
+      if (!res.ok) return;
+      const data = await res.json();
+
+      const totalEl = $("sec-stat-total");
+      if (totalEl) totalEl.textContent = data.total_trades || 0;
+
+      const winrateEl = $("sec-stat-winrate");
+      if (winrateEl) winrateEl.textContent = `${data.win_rate_pct || 0}%`;
+
+      const wlEl = $("sec-stat-wl");
+      if (wlEl) wlEl.textContent = `${data.wins || 0}W / ${data.losses || 0}L`;
+
+      const pnlEl = $("sec-stat-pnl");
+      if (pnlEl) {
+        const p = data.total_pnl_usdt || 0;
+        pnlEl.textContent = `${p >= 0 ? "+" : ""}$${p.toFixed(2)}`;
+        pnlEl.className = p >= 0 ? "font-weight-bold text-success" : "font-weight-bold text-danger";
+      }
+
+      const tbody = $("seconds-history-tbody");
+      if (!tbody) return;
+
+      const trades = data.trades || [];
+      if (trades.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="11" class="text-center text-muted py-4">No scalps executed yet in this session.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = trades
+        .map((h) => {
+          const isCall = h.direction === "CALL";
+          const pnl = h.pnl_usdt || 0;
+          const isProfit = pnl > 0;
+          const pnlColorClass = isProfit ? "text-success font-weight-bold" : (pnl < 0 ? "text-danger font-weight-bold" : "text-muted");
+          const pnlSign = isProfit ? "+" : "";
+
+          let statusBadge = `<span class="badge badge-secondary">${h.status}</span>`;
+          if (h.status === "WIN") {
+            statusBadge = `<span class="badge-scalp-win"><i class="fas fa-check-circle mr-1"></i>WIN (+85%)</span>`;
+          } else if (h.status === "LOSS") {
+            statusBadge = `<span class="badge-scalp-loss"><i class="fas fa-times-circle mr-1"></i>LOSS</span>`;
+          } else if (h.status && h.status.startsWith("CASHED_OUT")) {
+            statusBadge = `<span class="badge-scalp-cashed"><i class="fas fa-hand-holding-dollar mr-1"></i>CASHED OUT</span>`;
+          }
+
+          let aiBadgeClass = "badge-ai-antigravity";
+          if (h.ai_engine === "Codex AI") aiBadgeClass = "badge-ai-codex";
+          if (h.ai_engine === "Dual Consensus") aiBadgeClass = "badge-ai-consensus";
+          const aiBadge = `<span class="badge ${aiBadgeClass}">${h.ai_engine || "Antigravity AI"}</span>`;
+
+          const timeStr = h.closed_at ? new Date(h.closed_at * 1000).toLocaleTimeString() : "—";
+          const shortId = h.trade_id.replace("sec_", "").substring(0, 8);
+
+          return `
+            <tr>
+              <td class="font-mono text-muted">#${shortId}</td>
+              <td class="font-mono font-weight-bold text-white">${h.instrument}</td>
+              <td>${aiBadge}</td>
+              <td><span class="badge ${isCall ? "badge-success" : "badge-danger"}">${isCall ? "CALL ▲" : "PUT ▼"}</span></td>
+              <td class="font-mono">${h.duration_seconds}s</td>
+              <td class="font-mono">$${h.stake_usdt.toFixed(2)}</td>
+              <td class="font-mono text-white">$${h.entry_price ? h.entry_price.toLocaleString() : "—"}</td>
+              <td class="font-mono text-gold">$${h.exit_price ? h.exit_price.toLocaleString() : "—"}</td>
+              <td class="font-mono ${pnlColorClass}">${pnlSign}$${pnl.toFixed(2)} (${pnlSign}${h.pnl_pct || 0}%)</td>
+              <td>${statusBadge}</td>
+              <td class="text-muted small">${timeStr}</td>
+            </tr>
+          `;
+        })
+        .join("");
+    } catch (e) {
+      console.error("Seconds history fetch error:", e);
+    }
+  }
+
   // --- Settings Modal & API Credentials ---
   function setupSettingsModal() {
     $("btn-open-settings")?.addEventListener("click", () => {
@@ -1251,6 +1857,23 @@
         }
       } catch (e) {
         fb.innerHTML = `<div class="alert alert-danger">Error: ${e.message}</div>`;
+      }
+    });
+
+    $("btn-reset-paper")?.addEventListener("click", async () => {
+      try {
+        const res = await fetch("/crypto-com/api/paper/reset", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ amount: 10000.0 }),
+        });
+        if (res.ok) {
+          toast("Virtual paper balance reset to $10,000.00 USDT", "success");
+          await refreshPortfolio();
+          await refreshSecondsAdvice();
+        }
+      } catch (e) {
+        toast(e.message, "error");
       }
     });
   }

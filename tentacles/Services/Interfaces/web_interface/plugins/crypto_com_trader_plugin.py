@@ -61,6 +61,16 @@ class CryptoComTraderPlugin(AbstractWebInterfacePlugin):
             except Exception as error:
                 return flask.jsonify({"error": str(error)}), 500
 
+        @self.blueprint.route("/api/paper/reset", methods=["POST"])
+        @login.login_required_when_activated
+        def reset_paper():
+            try:
+                body = flask.request.get_json(silent=True) or {}
+                amount = float(body.get("amount", 10000.0))
+                return flask.jsonify(self.service.reset_paper(amount))
+            except Exception as error:
+                return flask.jsonify({"error": str(error)}), 500
+
         @self.blueprint.route("/api/credentials", methods=["POST"])
         @login.login_required_when_activated
         def set_credentials():
@@ -327,3 +337,104 @@ class CryptoComTraderPlugin(AbstractWebInterfacePlugin):
                 return flask.jsonify({"status": "ok", "order": order})
             except Exception as error:
                 return flask.jsonify({"error": str(error)}), 500
+
+        # --- Seconds Scalper Endpoints ---
+        @self.blueprint.route("/api/seconds/advice", methods=["GET"])
+        @login.login_required_when_activated
+        def seconds_advice():
+            instrument = flask.request.args.get("instrument", "BTC_USDT").upper()
+            provider = flask.request.args.get("provider", "auto").lower()
+            try:
+                res = self.ai_engine.generate_seconds_advice(instrument=instrument, provider=provider)
+                return flask.jsonify(res)
+            except Exception as error:
+                return flask.jsonify({"error": str(error)}), 500
+
+        @self.blueprint.route("/api/seconds/trade", methods=["POST"])
+        @login.login_required_when_activated
+        def seconds_trade():
+            body = flask.request.get_json(silent=True) or {}
+            instrument = str(body.get("instrument", "BTC_USDT")).upper()
+            direction = str(body.get("direction", "CALL")).upper()
+            ai_engine = str(body.get("ai_engine", "Manual"))
+            try:
+                stake = float(body.get("stake_usdt", 10.0))
+                duration = int(body.get("duration_seconds", 30))
+                is_live = (self.service.mode == "live")
+                res = self.service.seconds_mgr.open_seconds_trade(
+                    instrument=instrument,
+                    direction=direction,
+                    stake_usdt=stake,
+                    duration_seconds=duration,
+                    is_live=is_live,
+                    ai_engine=ai_engine,
+                )
+                return flask.jsonify({"status": "ok", "trade": res})
+            except ValueError as val_err:
+                return flask.jsonify({"error": str(val_err)}), 400
+            except Exception as error:
+                return flask.jsonify({"error": str(error)}), 500
+
+        @self.blueprint.route("/api/seconds/active", methods=["GET"])
+        @login.login_required_when_activated
+        def seconds_active():
+            try:
+                active = self.service.seconds_mgr.get_active_trades()
+                return flask.jsonify({"active_trades": active})
+            except Exception as error:
+                return flask.jsonify({"error": str(error)}), 500
+
+        @self.blueprint.route("/api/seconds/cashout", methods=["POST"])
+        @login.login_required_when_activated
+        def seconds_cashout():
+            body = flask.request.get_json(silent=True) or {}
+            trade_id = str(body.get("trade_id", "")).strip()
+            if not trade_id:
+                return flask.jsonify({"error": "trade_id is required"}), 400
+            try:
+                res = self.service.seconds_mgr.close_seconds_trade(trade_id=trade_id, early_exit=True)
+                return flask.jsonify({"status": "ok", "trade": res})
+            except ValueError as val_err:
+                return flask.jsonify({"error": str(val_err)}), 400
+            except Exception as error:
+                return flask.jsonify({"error": str(error)}), 500
+
+        @self.blueprint.route("/api/seconds/history", methods=["GET"])
+        @login.login_required_when_activated
+        def seconds_history():
+            try:
+                return flask.jsonify(self.service.seconds_mgr.get_history())
+            except Exception as error:
+                return flask.jsonify({"error": str(error)}), 500
+
+        @self.blueprint.route("/api/seconds/autopilot/status", methods=["GET"])
+        @login.login_required_when_activated
+        def seconds_autopilot_status():
+            try:
+                return flask.jsonify(self.service.get_seconds_autopilot_status())
+            except Exception as error:
+                return flask.jsonify({"error": str(error)}), 500
+
+        @self.blueprint.route("/api/seconds/autopilot/toggle", methods=["POST"])
+        @login.login_required_when_activated
+        def seconds_autopilot_toggle():
+            body = flask.request.get_json(silent=True) or {}
+            enabled = bool(body.get("enabled", False))
+            engine = body.get("engine")
+            min_confidence = body.get("min_confidence")
+            stake = body.get("stake_usdt")
+            duration = body.get("duration_seconds")
+            instrument = body.get("instrument")
+            try:
+                res = self.service.toggle_seconds_autopilot(
+                    enabled=enabled,
+                    engine=engine,
+                    min_confidence=min_confidence,
+                    stake=stake,
+                    duration=duration,
+                    instrument=instrument,
+                )
+                return flask.jsonify({"status": "ok", "autopilot": res})
+            except Exception as error:
+                return flask.jsonify({"error": str(error)}), 500
+
