@@ -1,8 +1,11 @@
 """OctoBot Web Interface plug-in for Crypto.com Trader & Strategy Hub."""
 
 import os
+from datetime import date, timedelta
+
 import flask
 
+from market_radar.ai_training import HistoricalTrainingService
 from market_radar.crypto_com_trade import (
     CryptoComTraderService,
     CryptoComAPIError,
@@ -23,6 +26,7 @@ class CryptoComTraderPlugin(AbstractWebInterfacePlugin):
         super().__init__(*args, **kwargs)
         self.service = CryptoComTraderService.get_instance()
         self.ai_engine = CryptoComAIEngine(self.service)
+        self.training_service = HistoricalTrainingService()
 
     def get_tabs(self):
         return [
@@ -31,7 +35,13 @@ class CryptoComTraderPlugin(AbstractWebInterfacePlugin):
                 "crypto_com_trader.index",
                 "Crypto.com Trader",
                 web_enums.TabsLocation.START,
-            )
+            ),
+            models.WebInterfaceTab(
+                "crypto_com_training",
+                "crypto_com_trader.training",
+                "Training",
+                web_enums.TabsLocation.START,
+            ),
         ]
 
     def register_routes(self):
@@ -39,6 +49,56 @@ class CryptoComTraderPlugin(AbstractWebInterfacePlugin):
         @login.login_required_when_activated
         def index():
             return flask.render_template("crypto_com_trader.html", active_page="crypto_com_trader")
+
+        @self.blueprint.route("/training")
+        @login.login_required_when_activated
+        def training():
+            today = date.today()
+            return flask.render_template(
+                "training.html",
+                active_page="crypto_com_training",
+                default_start=(today - timedelta(days=90)).isoformat(),
+                default_end=(today - timedelta(days=1)).isoformat(),
+                supported_timeframes=sorted(
+                    self.training_service.SUPPORTED_TIMEFRAMES,
+                    key=lambda item: (item[-1], int(item[:-1])),
+                ),
+            )
+
+        @self.blueprint.route("/api/training/status")
+        @login.login_required_when_activated
+        def training_status():
+            return flask.jsonify(self.training_service.status())
+
+        @self.blueprint.route("/api/training/run", methods=["POST"])
+        @login.login_required_when_activated
+        def run_training():
+            body = flask.request.get_json(silent=True) or {}
+            try:
+                result = self.training_service.train(
+                    start_date=str(body.get("start_date", "")),
+                    end_date=str(body.get("end_date", "")),
+                    instruments=list(body.get("instruments") or []),
+                    timeframe=str(body.get("timeframe", "1h")),
+                )
+                return flask.jsonify(result)
+            except ValueError as error:
+                return flask.jsonify({"error": str(error)}), 400
+            except Exception as error:
+                self.logger.exception(error, True, "Historical AI training failed")
+                return flask.jsonify({"error": f"Training failed: {error}"}), 500
+
+        @self.blueprint.route("/api/training/download")
+        @login.login_required_when_activated
+        def download_training():
+            if not self.training_service.profile_path.exists():
+                return flask.jsonify({"error": "No training profile is available"}), 404
+            return flask.send_file(
+                self.training_service.profile_path.resolve(),
+                as_attachment=True,
+                download_name="crypto_com_ai_training_profile.json",
+                mimetype="application/json",
+            )
 
         @self.blueprint.route("/api/status")
         @login.login_required_when_activated

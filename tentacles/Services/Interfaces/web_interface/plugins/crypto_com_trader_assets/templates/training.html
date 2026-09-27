@@ -1,0 +1,120 @@
+{% extends "layout.html" %}
+{% set page_title = "AI Historical Training" %}
+
+{% block additional_style %}
+<link rel="stylesheet" href="{{ url_for('crypto_com_trader.static', filename='crypto_com_trader.css') }}?v=training_2026_1">
+{% endblock additional_style %}
+
+{% block body %}
+<main
+    class="training-page py-4"
+    id="ai-training-root"
+    data-status-url="{{ url_for('crypto_com_trader.training_status') }}"
+    data-run-url="{{ url_for('crypto_com_trader.run_training') }}"
+    data-download-url="{{ url_for('crypto_com_trader.download_training') }}"
+>
+    <div class="training-hero mb-4">
+        <div>
+            <div class="training-eyebrow">CRYPTO.COM AI STUDIO</div>
+            <h1 class="mb-2"><i class="fas fa-graduation-cap mr-2"></i>Historical Training</h1>
+            <p class="mb-0">
+                Build a compact market profile from historical candles. Antigravity/Gemini and Codex receive
+                the matching pair profile alongside live price, order-book, and risk context.
+            </p>
+        </div>
+        <span class="badge badge-dark training-status-badge" id="training-status">Not trained</span>
+    </div>
+
+    <div class="alert alert-info training-safety-note">
+        <i class="fas fa-shield-halved mr-2"></i>
+        Historical patterns are supporting evidence, not a promise of future performance. Live liquidity,
+        risk limits, and model agreement continue to take priority.
+    </div>
+
+    <div class="row">
+        <div class="col-lg-5 mb-4">
+            <section class="training-card h-100">
+                <h3><i class="far fa-calendar-alt mr-2"></i>Build a training profile</h3>
+                <div class="form-row mt-3">
+                    <div class="form-group col-md-6">
+                        <label for="training-start-date">Start date</label>
+                        <input class="form-control" id="training-start-date" type="date" value="{{ default_start }}">
+                    </div>
+                    <div class="form-group col-md-6">
+                        <label for="training-end-date">End date</label>
+                        <input class="form-control" id="training-end-date" type="date" value="{{ default_end }}">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="training-timeframe">Candle timeframe</label>
+                    <select class="form-control" id="training-timeframe">
+                        {% for timeframe in supported_timeframes %}
+                        <option value="{{ timeframe }}" {% if timeframe == "1h" %}selected{% endif %}>{{ timeframe }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Trading pairs</label>
+                    <div class="training-pair-grid" id="training-pairs">
+                        {% for pair in ["BTC_USDT", "ETH_USDT", "SOL_USDT", "CRO_USDT", "DOGE_USDT", "XRP_USDT"] %}
+                        <label class="training-pair-option">
+                            <input type="checkbox" value="{{ pair }}" {% if pair in ["BTC_USDT", "ETH_USDT", "SOL_USDT"] %}checked{% endif %}>
+                            <span>{{ pair }}</span>
+                        </label>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <button class="btn btn-gold btn-block py-2" id="btn-run-historical-training">
+                    <i class="fas fa-database mr-2"></i>Collect Data &amp; Train AI Context
+                </button>
+                <div class="training-progress mt-3 d-none" id="training-progress">
+                    <div class="spinner-border spinner-border-sm text-warning mr-2" role="status"></div>
+                    Collecting candles and calculating market regimes…
+                </div>
+            </section>
+        </div>
+
+        <div class="col-lg-7 mb-4">
+            <section class="training-card h-100">
+                <div class="d-flex justify-content-between align-items-center flex-wrap">
+                    <h3 class="mb-2"><i class="fas fa-brain mr-2"></i>Active AI context</h3>
+                    <a class="btn btn-sm btn-outline-warning disabled" id="download-training-profile" href="#" aria-disabled="true">
+                        <i class="fas fa-download mr-1"></i>Download Profile
+                    </a>
+                </div>
+                <div class="training-metrics mt-3">
+                    <div><span>Date range</span><strong id="training-date-range">—</strong></div>
+                    <div><span>Timeframe</span><strong id="training-active-timeframe">—</strong></div>
+                    <div><span>Total candles</span><strong id="training-total-candles">0</strong></div>
+                    <div><span>Pairs</span><strong id="training-pair-count">0</strong></div>
+                </div>
+                <div class="table-responsive mt-4">
+                    <table class="table table-dark table-sm training-results-table">
+                        <thead>
+                            <tr>
+                                <th>Pair</th>
+                                <th>Regime</th>
+                                <th>Return</th>
+                                <th>Volatility</th>
+                                <th>Up candles</th>
+                                <th>Samples</th>
+                            </tr>
+                        </thead>
+                        <tbody id="training-results-body">
+                            <tr><td colspan="6" class="text-center text-muted py-4">No historical profile has been created.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <p class="small text-muted mb-0" id="training-last-updated">The Trader will use default live-only context until training completes.</p>
+            </section>
+        </div>
+    </div>
+</main>
+{% endblock body %}
+
+{% block additional_scripts %}
+<script src="{{ url_for('crypto_com_trader.static', filename='training.js') }}?v=training_2026_1"></script>
+{% endblock additional_scripts %}

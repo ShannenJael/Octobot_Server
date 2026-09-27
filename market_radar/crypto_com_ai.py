@@ -17,6 +17,8 @@ import urllib.error
 import urllib.request
 from typing import Any, Dict, List, Optional, Tuple
 
+from .ai_training import HistoricalTrainingService
+
 logger = logging.getLogger("CryptoComAI")
 
 
@@ -466,6 +468,10 @@ class CryptoComAIEngine:
             "mode": "paper",
         }
 
+        training_context = HistoricalTrainingService.load_context(None, instrument)
+        if training_context:
+            context["historical_training"] = training_context
+
         if not self.trade_service:
             return context
 
@@ -549,6 +555,7 @@ class CryptoComAIEngine:
         taker_ratio: float,
         micro_delta: float = 0.0,
         micro_pct: float = 0.0,
+        training_context: Optional[Dict[str, Any]] = None,
     ) -> Optional[Dict[str, Any]]:
         gemini_key = os.getenv("ANTIGRAVITY_API_KEY") or os.getenv("GEMINI_API_KEY")
         if not gemini_key or gemini_key.startswith("AQ.placeholder"):
@@ -561,6 +568,8 @@ class CryptoComAIEngine:
                 f"Orderbook Bid/Ask Volume Depth Skew: {depth_ratio:.2f}x ({'Bid dominant' if depth_ratio >= 1.0 else 'Ask dominant'}).\n"
                 f"Taker Buy/Sell Flow: {taker_ratio:.2f}x.\n"
                 f"Recent Micro-Tick Price Trajectory: {micro_delta:+.2f} USDT ({micro_pct:+.3f}%).\n"
+                f"Historical Training Profile (supporting context, never override live risk): "
+                f"{json.dumps(training_context, separators=(',', ':')) if training_context else 'not available'}.\n"
                 "TASK: Predict micro-trend direction for the next 30 to 60 seconds ('CALL' for upward micro tick surge, 'PUT' for downward dump).\n"
                 "RULES:\n"
                 "- Do NOT bias toward CALL. If micro-momentum is negative or asks dominate, predict PUT.\n"
@@ -615,6 +624,7 @@ class CryptoComAIEngine:
         taker_ratio: float,
         micro_delta: float = 0.0,
         micro_pct: float = 0.0,
+        training_context: Optional[Dict[str, Any]] = None,
     ) -> Optional[Dict[str, Any]]:
         openai_key = os.getenv("CODEX_API_KEY") or os.getenv("OPENAI_API_KEY")
         if not openai_key or openai_key.startswith("sk-proj-placeholder"):
@@ -634,6 +644,8 @@ class CryptoComAIEngine:
             f"Orderbook Bid/Ask Depth Skew: {depth_ratio:.2f}x ({'Bids Dominant' if depth_ratio >= 1.0 else 'Asks Dominant'})\n"
             f"Recent Taker Volume Flow: {taker_ratio:.2f}x buy-to-sell ratio\n"
             f"Recent Micro-Tick Trajectory (last 25 trades): {micro_delta:+.2f} USDT ({micro_pct:+.3f}%)\n\n"
+            f"Historical Training Profile (supporting context only): "
+            f"{json.dumps(training_context, separators=(',', ':')) if training_context else 'not available'}\n\n"
             "RULES:\n"
             "1. If micro-momentum is negative ({micro_delta:+.2f} < 0) or ask depth dominates (< 0.95x), PREDICT PUT.\n"
             "2. If micro-momentum is positive ({micro_delta:+.2f} > 0) and bid depth dominates (> 1.05x), PREDICT CALL.\n"
@@ -699,6 +711,7 @@ class CryptoComAIEngine:
         context = self._get_market_context(instrument)
         last_price = context.get("last_price", 81000.0)
         depth_ratio = context.get("depth_bid_ask_ratio", 1.0)
+        training_context = context.get("historical_training")
 
         # Micro-tape flow analysis and tick trajectory from live trades
         taker_ratio = 1.0
@@ -727,8 +740,8 @@ class CryptoComAIEngine:
 
         # 1. Dual AI Consensus
         if req_prov == "consensus":
-            anti = self._call_antigravity_seconds(instrument, last_price, depth_ratio, taker_ratio, micro_delta, micro_pct)
-            codex = self._call_codex_seconds(instrument, last_price, depth_ratio, taker_ratio, micro_delta, micro_pct)
+            anti = self._call_antigravity_seconds(instrument, last_price, depth_ratio, taker_ratio, micro_delta, micro_pct, training_context)
+            codex = self._call_codex_seconds(instrument, last_price, depth_ratio, taker_ratio, micro_delta, micro_pct, training_context)
             if anti and codex:
                 is_agreed = anti["direction"] == codex["direction"]
                 if is_agreed:
@@ -772,22 +785,22 @@ class CryptoComAIEngine:
 
         # 2. Codex Requested Specifically
         if req_prov == "codex":
-            codex_res = self._call_codex_seconds(instrument, last_price, depth_ratio, taker_ratio, micro_delta, micro_pct)
+            codex_res = self._call_codex_seconds(instrument, last_price, depth_ratio, taker_ratio, micro_delta, micro_pct, training_context)
             if codex_res:
                 return codex_res
 
         # 3. Antigravity Requested Specifically
         if req_prov == "antigravity":
-            anti_res = self._call_antigravity_seconds(instrument, last_price, depth_ratio, taker_ratio, micro_delta, micro_pct)
+            anti_res = self._call_antigravity_seconds(instrument, last_price, depth_ratio, taker_ratio, micro_delta, micro_pct, training_context)
             if anti_res:
                 return anti_res
 
         # 4. Auto: Try Antigravity first, then Codex
         if req_prov == "auto":
-            anti_res = self._call_antigravity_seconds(instrument, last_price, depth_ratio, taker_ratio, micro_delta, micro_pct)
+            anti_res = self._call_antigravity_seconds(instrument, last_price, depth_ratio, taker_ratio, micro_delta, micro_pct, training_context)
             if anti_res:
                 return anti_res
-            codex_res = self._call_codex_seconds(instrument, last_price, depth_ratio, taker_ratio, micro_delta, micro_pct)
+            codex_res = self._call_codex_seconds(instrument, last_price, depth_ratio, taker_ratio, micro_delta, micro_pct, training_context)
             if codex_res:
                 return codex_res
 
