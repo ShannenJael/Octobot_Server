@@ -66,7 +66,7 @@ class CryptoComTraderPlugin(AbstractWebInterfacePlugin):
         def reset_paper():
             try:
                 body = flask.request.get_json(silent=True) or {}
-                amount = float(body.get("amount", 10000.0))
+                amount = float(body.get("amount", 20000.0))
                 return flask.jsonify(self.service.reset_paper(amount))
             except Exception as error:
                 return flask.jsonify({"error": str(error)}), 500
@@ -189,7 +189,7 @@ class CryptoComTraderPlugin(AbstractWebInterfacePlugin):
         @login.login_required_when_activated
         def paper_reset():
             body = flask.request.get_json(silent=True) or {}
-            usdt = float(body.get("amount", 10000.0))
+            usdt = float(body.get("amount", 20000.0))
             try:
                 balances = self.service.paper.reset_balances(usdt)
                 return flask.jsonify({"status": "ok", "balances": balances})
@@ -437,4 +437,3 @@ class CryptoComTraderPlugin(AbstractWebInterfacePlugin):
                 return flask.jsonify({"status": "ok", "autopilot": res})
             except Exception as error:
                 return flask.jsonify({"error": str(error)}), 500
-

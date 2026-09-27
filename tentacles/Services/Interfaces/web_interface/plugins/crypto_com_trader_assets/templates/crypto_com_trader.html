@@ -3,7 +3,7 @@
 {% set page_title = "Crypto.com Trader & Strategy Hub" %}
 
 {% block additional_style %}
-<link rel="stylesheet" href="{{ url_for('crypto_com_trader.static', filename='crypto_com_trader.css') }}?v=sec_2026_tv">
+<link rel="stylesheet" href="{{ url_for('crypto_com_trader.static', filename='crypto_com_trader.css') }}?v=sec_2026_sel_fix">
 <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
 {% endblock additional_style %}
 
@@ -48,7 +48,7 @@
             <div class="portfolio-banner">
                 <div class="equity-col">
                     <span class="equity-lbl">ESTIMATED NET WORTH</span>
-                    <div class="equity-val" id="total-equity">$10,000.00 <small>USDT</small></div>
+                    <div class="equity-val" id="total-equity">$20,000.00 <small>USDT</small></div>
                     <span class="pnl-tag text-success" id="unrealized-pnl">+0.00% ($0.00)</span>
                 </div>
                 <div class="btn-group ml-3">
@@ -162,7 +162,7 @@
                     <!-- Available balance row -->
                     <div class="balance-row">
                         <span>Available:</span>
-                        <strong id="avail-balance">10,000.00 USDT</strong>
+                        <strong id="avail-balance">20,000.00 USDT</strong>
                     </div>
 
                     <!-- Limit Price input (hidden for Market) -->
@@ -389,7 +389,7 @@
                     <div class="form-group mb-3">
                         <div class="d-flex justify-content-between align-items-center mb-1">
                             <label class="small text-muted text-uppercase letter-spacing-1 font-weight-bold">Stake (USDT)</label>
-                            <span class="small text-muted">Avail: <strong class="text-white" id="sec-avail-usdt">$10,000.00</strong></span>
+                            <span class="small text-muted">Avail: <strong class="text-white" id="sec-avail-usdt">$20,000.00</strong></span>
                         </div>
                         <div class="input-group">
                             <div class="input-group-prepend"><span class="input-group-text bg-dark border-secondary text-muted">$</span></div>
@@ -449,7 +449,7 @@
             <div class="row align-items-center mt-3 pt-2 border-top border-secondary small">
                 <div class="col-md-4 mb-2 mb-md-0">
                     <span class="text-muted d-block font-weight-bold">AUTONOMOUS OPERATOR:</span>
-                    <select class="form-control form-control-sm trader-input mt-1" id="autopilot-engine-select">
+                    <select class="form-control trader-input mt-1" id="autopilot-engine-select">
                         <option value="antigravity" selected>⚡ Antigravity AI (Gemini 3.6)</option>
                         <option value="codex">🧠 Codex AI (OpenAI GPT-4o)</option>
                         <option value="consensus">🛡️ Dual AI Consensus (Both Must Agree)</option>
@@ -860,7 +860,7 @@
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h3 class="text-gold m-0"><i class="fas fa-coins mr-2"></i>Asset Balances & Ledger</h3>
                 <button class="btn btn-sm btn-outline-warning" id="btn-reset-paper">
-                    <i class="fas fa-rotate-left"></i> Reset Paper Balance ($10,000)
+                    <i class="fas fa-rotate-left"></i> Reset Paper Balance ($20,000)
                 </button>
             </div>
             <div class="table-responsive">
@@ -968,5 +968,5 @@
     <div id="toast-container" class="toast-fixed"></div>
 </main>
 
-<script src="{{ url_for('crypto_com_trader.static', filename='crypto_com_trader.js') }}?v=sec_2026_tv2"></script>
+<script src="{{ url_for('crypto_com_trader.static', filename='crypto_com_trader.js') }}?v=sec_smooth_ticker"></script>
 {% endblock body %}

@@ -272,7 +272,7 @@ class CryptoComExchangeClient:
 class PaperTradingEngine:
     """Simulates spot trading ledger and order execution without risking real funds."""
 
-    def __init__(self, storage_dir: Optional[Path] = None, initial_usdt: float = 10000.0):
+    def __init__(self, storage_dir: Optional[Path] = None, initial_usdt: float = 20000.0):
         self.storage_dir = storage_dir or Path(os.getenv("MARKET_RADAR_DATA_DIR", "user/crypto_com_trader"))
         self.file_path = self.storage_dir / "paper_ledger.json"
         self._lock = threading.Lock()
@@ -313,7 +313,7 @@ class PaperTradingEngine:
         except Exception as e:
             logger.error("Failed to save paper trading ledger: %s", e)
 
-    def reset_balances(self, usdt_amount: float = 10000.0) -> Dict[str, float]:
+    def reset_balances(self, usdt_amount: float = 20000.0) -> Dict[str, float]:
         with self._lock:
             self.balances = {"USDT": float(usdt_amount)}
             self.open_orders = []
@@ -1244,7 +1244,7 @@ class CryptoComTraderService:
             self.mode = mode
             return self.mode
 
-    def reset_paper(self, usdt_amount: float = 10000.0) -> Dict[str, Any]:
+    def reset_paper(self, usdt_amount: float = 20000.0) -> Dict[str, Any]:
         res = self.paper.reset_balances(usdt_amount)
         if hasattr(self, "seconds_mgr") and self.seconds_mgr:
             with self.seconds_mgr._lock:

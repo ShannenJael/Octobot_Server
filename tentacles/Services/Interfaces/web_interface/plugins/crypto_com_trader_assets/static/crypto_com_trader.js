@@ -47,7 +47,7 @@
     lastPrice: 0,
     bestBid: 0,
     bestAsk: 0,
-    balances: { USDT: 10000 },
+    balances: { USDT: 20000 },
     candles: [],
     strategies: {},
     secondsPair: "BTC_USDT",
@@ -651,15 +651,15 @@
   }
 
   $("btn-reset-paper")?.addEventListener("click", async () => {
-    if (!confirm("Reset paper balance to initial $10,000 USDT?")) return;
+    if (!confirm("Reset paper balance to initial $20,000 USDT?")) return;
     try {
       const res = await fetch(URLS.paperReset, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amount: 10000 }),
+        body: JSON.stringify({ amount: 20000 }),
       });
       if (res.ok) {
-        toast("Paper balance reset to $10,000 USDT", "success");
+        toast("Paper balance reset to $20,000 USDT", "success");
         refreshPortfolio();
         refreshOrders();
       }
@@ -1620,12 +1620,44 @@
     }
   }
 
+  // Local active trades cache for smooth continuous countdown without DOM rebuilds
+  let localActiveTrades = [];
+  let countdownTickerId = null;
+
+  function startLocalCountdownTicker() {
+    if (countdownTickerId) return;
+    countdownTickerId = setInterval(() => {
+      if (!localActiveTrades || localActiveTrades.length === 0) return;
+      const now = Date.now() / 1000;
+      localActiveTrades.forEach((t) => {
+        const card = $(`card-${t.trade_id}`);
+        if (!card) return;
+        const remSec = Math.max(0, Math.ceil(t.expiry_time - now));
+        const totalSec = t.duration_seconds || 30;
+        const pctRemaining = Math.max(0, Math.min(1, remSec / totalSec));
+        const radius = 36;
+        const circum = 2 * Math.PI * radius;
+        const strokeOffset = circum * (1 - pctRemaining);
+
+        const numEl = card.querySelector(".countdown-number");
+        if (numEl) numEl.textContent = `${remSec}s`;
+
+        const circleEl = card.querySelector(".countdown-progress-circle");
+        if (circleEl) circleEl.style.strokeDashoffset = strokeOffset;
+
+        const settleEl = card.querySelector(".settle-countdown-text");
+        if (settleEl) settleEl.textContent = `${remSec}s`;
+      });
+    }, 200);
+  }
+
   async function refreshSecondsActive() {
     try {
       const res = await fetch(URLS.secondsActive);
       if (!res.ok) return;
       const data = await res.json();
       const trades = data.active_trades || [];
+      localActiveTrades = trades;
 
       const countBadge = $("sec-active-count-badge");
       if (countBadge) {
@@ -1637,32 +1669,118 @@
       if (!container) return;
 
       if (trades.length === 0) {
-        container.innerHTML = `
-          <div class="seconds-empty-state text-center py-4 w-100" id="seconds-empty-state">
-            <i class="fas fa-stopwatch text-muted fa-3x mb-3"></i>
-            <h5 class="text-white">No Active Seconds Scalps</h5>
-            <p class="text-muted small mb-0">Choose your stake and duration, then click <strong>FLASH CALL</strong> or <strong>FLASH PUT</strong> to begin a micro-cycle.</p>
-          </div>
-        `;
+        // If there are cards currently settling, wait for them to finish their 2.5s display
+        if (container.querySelectorAll(".seconds-active-card.is-settling").length > 0) {
+          return;
+        }
+
+        if (container.querySelectorAll(".seconds-active-card").length > 0) {
+          refreshSecondsHistory();
+          refreshPortfolio();
+        }
+
+        if (state.autopilotEnabled) {
+          container.innerHTML = `
+            <div class="seconds-autopilot-scanning-state text-center py-4 w-100 p-3 rounded" style="background: rgba(212,175,55,0.06); border: 1px dashed rgba(212,175,55,0.35);">
+              <div class="d-flex justify-content-center align-items-center mb-2">
+                <span class="spinner-grow spinner-grow-sm text-warning mr-2" role="status"></span>
+                <h5 class="text-gold mb-0 font-weight-bold">Autonomous Auto-Pilot Active & Scanning</h5>
+              </div>
+              <p class="text-muted small mb-0">AI operator is evaluating micro order-flow and momentum. When high conviction is detected, the next seconds trade will execute automatically.</p>
+            </div>
+          `;
+        } else {
+          container.innerHTML = `
+            <div class="seconds-empty-state text-center py-4 w-100" id="seconds-empty-state">
+              <i class="fas fa-stopwatch text-muted fa-3x mb-3"></i>
+              <h5 class="text-white">No Active Seconds Scalps</h5>
+              <p class="text-muted small mb-0">Choose your stake and duration, then click <strong>FLASH CALL</strong> or <strong>FLASH PUT</strong> to begin a micro-cycle.</p>
+            </div>
+          `;
+        }
         return;
       }
 
-      container.innerHTML = trades
-        .map((t) => {
-          const isCall = t.direction === "CALL";
-          const dirColor = isCall ? "#00e676" : "#ff334b";
-          const cardClass = isCall ? "call-card" : "put-card";
-          const remSec = Math.max(0, Math.ceil(t.remaining_seconds));
-          const totalSec = t.duration_seconds || 30;
-          const pctRemaining = Math.max(0, Math.min(1, remSec / totalSec));
-          const radius = 36;
-          const circum = 2 * Math.PI * radius; // ~226.19
-          const strokeOffset = circum * (1 - pctRemaining);
-          const isProfit = t.floating_pnl_usdt > 0;
-          const pnlColorClass = isProfit ? "text-success" : "text-danger";
-          const pnlSign = isProfit ? "+" : "";
+      // Remove empty/scanning state if active trades exist
+      const emptyState = $("seconds-empty-state") || container.querySelector(".seconds-autopilot-scanning-state");
+      if (emptyState) emptyState.remove();
 
-          return `
+      // Gracefully hold completed cards for 2.5s with "SETTLED" state before removing
+      const activeIds = new Set(trades.map((t) => String(t.trade_id)));
+      container.querySelectorAll(".seconds-active-card").forEach((card) => {
+        const id = card.id.replace("card-", "");
+        if (!activeIds.has(id) && !card.classList.contains("is-settling")) {
+          card.classList.add("is-settling");
+          const countdownNum = card.querySelector(".countdown-number");
+          if (countdownNum) countdownNum.textContent = "0s";
+          const settleBadge = card.querySelector(".badge");
+          if (settleBadge) settleBadge.innerHTML = `<i class="fas fa-check-circle mr-1"></i> SETTLED`;
+          const cashoutBtn = card.querySelector(".btn-cashout-early");
+          if (cashoutBtn) {
+            cashoutBtn.disabled = true;
+            cashoutBtn.className = "btn btn-sm btn-outline-secondary disabled";
+            cashoutBtn.textContent = "Moved to Ledger";
+          }
+          const settleEl = card.querySelector(".settle-countdown-text");
+          if (settleEl) settleEl.textContent = "0s (Settled)";
+
+          setTimeout(() => {
+            card.remove();
+            refreshSecondsHistory();
+            refreshPortfolio();
+          }, 2500);
+        }
+      });
+
+      // Update or create each trade card in-place (no flicker / disappearance)
+      trades.forEach((t) => {
+        const isCall = t.direction === "CALL";
+        const dirColor = isCall ? "#00e676" : "#ff334b";
+        const cardClass = isCall ? "call-card" : "put-card";
+        const remSec = Math.max(0, Math.ceil(t.remaining_seconds));
+        const totalSec = t.duration_seconds || 30;
+        const pctRemaining = Math.max(0, Math.min(1, remSec / totalSec));
+        const radius = 36;
+        const circum = 2 * Math.PI * radius;
+        const strokeOffset = circum * (1 - pctRemaining);
+        const isProfit = t.floating_pnl_usdt > 0;
+        const pnlColorClass = isProfit ? "text-success" : "text-danger";
+        const pnlSign = isProfit ? "+" : "";
+
+        let card = $(`card-${t.trade_id}`);
+        if (card) {
+          // In-place property update: smooth, no DOM recreation
+          const numEl = card.querySelector(".countdown-number");
+          if (numEl) numEl.textContent = `${remSec}s`;
+
+          const circleEl = card.querySelector(".countdown-progress-circle");
+          if (circleEl) circleEl.style.strokeDashoffset = strokeOffset;
+
+          const pnlEl = card.querySelector(".floating-pnl-val");
+          if (pnlEl) {
+            pnlEl.className = `h4 font-weight-bold ${pnlColorClass} mb-1 font-mono floating-pnl-val`;
+            pnlEl.textContent = `${pnlSign}$${t.floating_pnl_usdt.toFixed(2)} (${pnlSign}${t.floating_pnl_pct.toFixed(1)}%)`;
+          }
+
+          const curPxEl = card.querySelector(".current-price-val");
+          if (curPxEl) curPxEl.textContent = `$${t.current_price.toLocaleString()}`;
+
+          const deltaEl = card.querySelector(".delta-pct-val");
+          if (deltaEl) {
+            deltaEl.className = `${t.delta_pct >= 0 ? "text-success" : "text-danger"} delta-pct-val`;
+            deltaEl.textContent = `(${t.delta_pct >= 0 ? "▲ +" : "▼ "}${t.delta_pct.toFixed(2)}%)`;
+          }
+
+          const settleEl = card.querySelector(".settle-countdown-text");
+          if (settleEl) settleEl.textContent = `${remSec}s`;
+
+          const cashoutBtn = card.querySelector(".btn-cashout-early");
+          if (cashoutBtn) {
+            cashoutBtn.innerHTML = `<i class="fas fa-hand-holding-dollar mr-1"></i> Cash Out ($${t.cashout_value_usdt.toFixed(2)})`;
+          }
+        } else {
+          // Construct card once
+          const cardHtml = `
             <div class="seconds-active-card ${cardClass}" id="card-${t.trade_id}">
               <div class="d-flex justify-content-between align-items-start mb-2">
                 <div>
@@ -1689,34 +1807,38 @@
                 <!-- Live Floating PnL & Tick Price -->
                 <div class="text-right flex-grow-1 ml-3">
                   <div class="small text-muted mb-1">FLOATING PnL</div>
-                  <div class="h4 font-weight-bold ${pnlColorClass} mb-1 font-mono">
+                  <div class="h4 font-weight-bold ${pnlColorClass} mb-1 font-mono floating-pnl-val">
                     ${pnlSign}$${t.floating_pnl_usdt.toFixed(2)} (${pnlSign}${t.floating_pnl_pct.toFixed(1)}%)
                   </div>
                   <div class="small font-mono text-muted">
                     Entry: <span class="text-white">$${t.entry_price.toLocaleString()}</span>
                   </div>
                   <div class="small font-mono text-muted">
-                    Now: <span class="text-gold font-weight-bold">$${t.current_price.toLocaleString()}</span>
-                    <span class="${t.delta_pct >= 0 ? "text-success" : "text-danger"}">(${t.delta_pct >= 0 ? "▲ +" : "▼ "}${t.delta_pct.toFixed(2)}%)</span>
+                    Now: <span class="text-gold font-weight-bold current-price-val">$${t.current_price.toLocaleString()}</span>
+                    <span class="${t.delta_pct >= 0 ? "text-success" : "text-danger"} delta-pct-val">(${t.delta_pct >= 0 ? "▲ +" : "▼ "}${t.delta_pct.toFixed(2)}%)</span>
                   </div>
                 </div>
               </div>
 
               <!-- Early Cashout Action -->
               <div class="d-flex justify-content-between align-items-center mt-2 pt-2 border-top border-secondary">
-                <span class="small text-muted">Auto-settles in <strong>${remSec}s</strong></span>
+                <span class="small text-muted">Auto-settles in <strong class="settle-countdown-text">${remSec}s</strong></span>
                 <button class="btn btn-sm btn-cashout-early" onclick="window.cashoutSecondsTrade('${t.trade_id}')">
                   <i class="fas fa-hand-holding-dollar mr-1"></i> Cash Out ($${t.cashout_value_usdt.toFixed(2)})
                 </button>
               </div>
             </div>
           `;
-        })
-        .join("");
+          container.insertAdjacentHTML("beforeend", cardHtml);
+        }
+      });
+
+      startLocalCountdownTicker();
     } catch (e) {
       console.error("Seconds active trades fetch error:", e);
     }
   }
+
 
   async function cashoutSecondsTrade(tradeId) {
     if (!tradeId) return;
@@ -1865,10 +1987,10 @@
         const res = await fetch("/crypto-com/api/paper/reset", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ amount: 10000.0 }),
+          body: JSON.stringify({ amount: 20000.0 }),
         });
         if (res.ok) {
-          toast("Virtual paper balance reset to $10,000.00 USDT", "success");
+          toast("Virtual paper balance reset to $20,000.00 USDT", "success");
           await refreshPortfolio();
           await refreshSecondsAdvice();
         }

@@ -462,7 +462,7 @@ class CryptoComAIEngine:
             "low_24h": 80000.0,
             "depth_bid_ask_ratio": 1.15,
             "rsi_14": 54.0,
-            "balances": {"USDT": 10000.0, "BTC": 0.0},
+            "balances": {"USDT": 20000.0, "BTC": 0.0},
             "mode": "paper",
         }
 

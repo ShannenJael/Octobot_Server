@@ -1431,4 +1431,66 @@
   font-weight: 600;
 }
 
+/* ==========================================================================
+   AUTONOMOUS OPERATOR SELECTOR & TELEMETRY STYLING
+   ========================================================================== */
+#autopilot-engine-select,
+select.trader-input {
+  height: 40px !important;
+  min-height: 40px !important;
+  line-height: 1.5 !important;
+  padding: 6px 36px 6px 12px !important;
+  font-size: 0.88rem !important;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
+  background-color: #090d14 !important;
+  color: #f0f6fc !important;
+  border: 1px solid rgba(212, 175, 55, 0.45) !important;
+  border-radius: 6px !important;
+  display: block !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  cursor: pointer !important;
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  -moz-appearance: none !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23d4af37' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") !important;
+  background-repeat: no-repeat !important;
+  background-position: right 12px center !important;
+  background-size: 14px 14px !important;
+}
+
+#autopilot-engine-select:focus,
+select.trader-input:focus {
+  border-color: var(--gold) !important;
+  box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.25) !important;
+  outline: none !important;
+}
+
+#autopilot-engine-select option,
+select.trader-input option {
+  background-color: #0d1117 !important;
+  color: #f0f6fc !important;
+  padding: 10px 14px !important;
+  font-size: 0.9rem !important;
+}
+
+#autopilot-conf-selector {
+  height: 40px !important;
+}
+
+#autopilot-conf-selector .btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 0.78rem !important;
+  font-weight: 600 !important;
+  padding: 6px 4px !important;
+}
+
+.autopilot-status-box {
+  min-height: 40px !important;
+  display: flex !important;
+  align-items: center !important;
+}
+
 
