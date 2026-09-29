@@ -11,6 +11,7 @@ from pathlib import Path
 from market_radar.crypto_com_trade import (
     CryptoComExchangeClient,
     PaperTradingEngine,
+    SecondsScalpManager,
     TradingStrategyManager,
     CryptoComTraderService,
 )
@@ -181,6 +182,82 @@ class TestTradingStrategyManager(unittest.TestCase):
         self.assertEqual(res["status"], "RUNNING")
         stopped = self.mgr.stop_radar()
         self.assertEqual(stopped["status"], "STOPPED")
+
+
+class FakeSecondsClient:
+    def __init__(self):
+        self.current_price = 100.0
+        self.orders = []
+        self.fail_on_order_number = None
+
+    @property
+    def has_credentials(self):
+        return True
+
+    def get_book(self, instrument, depth=5):
+        return {
+            "bids": [[self.current_price - 1.0, 1.0]],
+            "asks": [[self.current_price + 1.0, 1.0]],
+        }
+
+    def get_ticker(self, instrument):
+        return {"k": self.current_price}
+
+    def create_order(self, **order):
+        order_number = len(self.orders) + 1
+        if self.fail_on_order_number == order_number:
+            raise RuntimeError("exchange rejected order")
+        result = {"order_id": f"live_{order_number}", **order}
+        self.orders.append(result)
+        return result
+
+
+class TestSecondsScalpManager(unittest.TestCase):
+    def setUp(self):
+        self.temp_dir = tempfile.mkdtemp()
+        self.client = FakeSecondsClient()
+        self.paper = PaperTradingEngine(storage_dir=Path(self.temp_dir) / "paper")
+        self.manager = SecondsScalpManager(
+            self.client,
+            self.paper,
+            storage_dir=Path(self.temp_dir) / "seconds",
+        )
+
+    def tearDown(self):
+        self.manager.running = False
+        shutil.rmtree(self.temp_dir, ignore_errors=True)
+
+    def test_rejected_live_entry_does_not_create_active_trade(self):
+        self.client.fail_on_order_number = 1
+        with self.assertRaisesRegex(RuntimeError, "entry order was not accepted"):
+            self.manager.open_seconds_trade("BTC_USDT", "CALL", 10.0, is_live=True)
+        self.assertEqual(self.manager.active_trades, [])
+
+    def test_live_put_is_rejected_before_exchange_submission(self):
+        with self.assertRaisesRegex(ValueError, "long-only spot"):
+            self.manager.open_seconds_trade("BTC_USDT", "PUT", 10.0, is_live=True)
+        self.assertEqual(self.client.orders, [])
+        self.assertEqual(self.manager.active_trades, [])
+
+    def test_rejected_live_exit_keeps_position_active(self):
+        trade = self.manager.open_seconds_trade("BTC_USDT", "CALL", 10.0, is_live=True)
+        self.client.fail_on_order_number = 2
+        with self.assertRaisesRegex(RuntimeError, "exit order was not accepted"):
+            self.manager.close_seconds_trade(trade["trade_id"])
+        self.assertEqual(len(self.manager.active_trades), 1)
+        self.assertEqual(self.manager.active_trades[0]["trade_id"], trade["trade_id"])
+        self.assertEqual(self.manager.active_trades[0]["close_attempts"], 1)
+        self.assertIn("exchange rejected", self.manager.active_trades[0]["close_error"])
+
+    def test_live_trade_uses_spot_pnl_instead_of_fixed_payout(self):
+        trade = self.manager.open_seconds_trade("BTC_USDT", "CALL", 10.0, is_live=True)
+        self.client.current_price = 110.0
+        settled = self.manager.close_seconds_trade(trade["trade_id"])
+        self.assertEqual(settled["execution_model"], "spot_long")
+        self.assertGreater(settled["pnl_usdt"], 0)
+        self.assertLess(settled["pnl_usdt"], 2.0)
+        self.assertIsNotNone(settled["exit_order"])
+        self.assertEqual(self.manager.active_trades, [])
 
 
 if __name__ == "__main__":

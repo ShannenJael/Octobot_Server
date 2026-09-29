@@ -330,7 +330,7 @@
                         </div>
                         <div class="seconds-prob-wrap mt-3">
                             <div class="d-flex justify-content-between text-muted small mb-1">
-                                <span>AI Win Probability</span>
+                                <span>AI Signal Confidence</span>
                                 <strong class="text-white" id="sec-prob-text">78%</strong>
                             </div>
                             <div class="progress progress-dark" style="height: 10px; border-radius: 6px;">
@@ -406,7 +406,7 @@
 
                     <!-- Payout & Return Indicator -->
                     <div class="payout-indicator-box p-2 mb-3 rounded d-flex justify-content-between align-items-center">
-                        <span class="small text-muted"><i class="fas fa-coins text-warning mr-1"></i> Potential Profit (+85%):</span>
+                        <span class="small text-muted" id="sec-potential-label"><i class="fas fa-coins text-warning mr-1"></i> Simulated payout (+85%):</span>
                         <strong class="text-success h5 m-0" id="sec-potential-profit">+$8.50 USDT</strong>
                     </div>
 
@@ -531,6 +531,109 @@
                 </table>
             </div>
         </div>
+    </div>
+
+        <!-- AI Studio: Self-Tuning Model Trainer + Strategy Optimizer -->
+        <div class="row mt-3" id="scalp-ai-studio">
+            <!-- Self-Tuning Model Trainer -->
+            <div class="col-lg-6 mb-3">
+                <div class="card trader-card p-4 h-100" id="scalp-trainer-card">
+                    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                        <div>
+                            <h4 class="text-gold m-0"><i class="fas fa-brain text-success mr-2"></i>AI Self-Tuning Model</h4>
+                            <small class="text-muted">Continuous weight optimization calibrated on your scalp outcomes</small>
+                        </div>
+                        <button class="btn btn-sm btn-outline-success" id="btn-scalp-train-model">
+                            <i class="fas fa-play mr-1"></i> Run Training
+                        </button>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="text-muted small">STATUS:</span>
+                        <span class="badge badge-pill badge-dark" id="scalp-train-status-badge">Default Weights</span>
+                    </div>
+                    <div id="scalp-weights-display" class="mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span class="small text-muted" style="width:110px;">Trend</span>
+                            <div class="progress flex-grow-1 mx-2" style="height:8px;"><div class="progress-bar bg-info" id="scalp-wbar-trend" style="width:30%"></div></div>
+                            <span class="small text-white font-mono" id="scalp-wval-trend" style="width:36px;text-align:right;">30%</span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span class="small text-muted" style="width:110px;">Momentum</span>
+                            <div class="progress flex-grow-1 mx-2" style="height:8px;"><div class="progress-bar bg-info" id="scalp-wbar-momentum" style="width:20%"></div></div>
+                            <span class="small text-white font-mono" id="scalp-wval-momentum" style="width:36px;text-align:right;">20%</span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span class="small text-muted" style="width:110px;">Liquidity</span>
+                            <div class="progress flex-grow-1 mx-2" style="height:8px;"><div class="progress-bar bg-info" id="scalp-wbar-liquidity" style="width:25%"></div></div>
+                            <span class="small text-white font-mono" id="scalp-wval-liquidity" style="width:36px;text-align:right;">25%</span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span class="small text-muted" style="width:110px;">Volatility</span>
+                            <div class="progress flex-grow-1 mx-2" style="height:8px;"><div class="progress-bar bg-info" id="scalp-wbar-volatility" style="width:15%"></div></div>
+                            <span class="small text-white font-mono" id="scalp-wval-volatility" style="width:36px;text-align:right;">15%</span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span class="small text-muted" style="width:110px;">Rel Strength</span>
+                            <div class="progress flex-grow-1 mx-2" style="height:8px;"><div class="progress-bar bg-info" id="scalp-wbar-relative_strength" style="width:10%"></div></div>
+                            <span class="small text-white font-mono" id="scalp-wval-relative_strength" style="width:36px;text-align:right;">10%</span>
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-between pt-2 border-top border-secondary small text-muted">
+                        <div>Samples: <strong class="text-white" id="scalp-train-samples">0</strong></div>
+                        <div>Directional Acc: <strong class="text-white" id="scalp-train-accuracy">—</strong></div>
+                        <div>Last Loss: <strong class="text-white" id="scalp-train-loss">—</strong></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Strategy Parameter Optimizer -->
+            <div class="col-lg-6 mb-3">
+                <div class="card trader-card p-4 h-100" id="scalp-optimizer-card">
+                    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                        <div>
+                            <h4 class="text-gold m-0"><i class="fas fa-sliders-h text-warning mr-2"></i>Strategy Parameter Optimizer</h4>
+                            <small class="text-muted">Walk-forward backtest optimization on Crypto.com 1h candle history</small>
+                        </div>
+                        <button class="btn btn-sm btn-outline-warning" id="btn-scalp-optimize-params">
+                            <i class="fas fa-crosshairs mr-1"></i> Optimize Parameters
+                        </button>
+                    </div>
+                    <div class="row text-center mb-3">
+                        <div class="col-6 mb-2">
+                            <div class="p-2 rounded bg-dark border border-secondary">
+                                <span class="small text-muted d-block">Min Buy Score</span>
+                                <strong class="text-white" id="scalp-opt-buy-score">75.0</strong>
+                            </div>
+                        </div>
+                        <div class="col-6 mb-2">
+                            <div class="p-2 rounded bg-dark border border-secondary">
+                                <span class="small text-muted d-block">Take Profit</span>
+                                <strong class="text-success" id="scalp-opt-tp">+3.0%</strong>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="p-2 rounded bg-dark border border-secondary">
+                                <span class="small text-muted d-block">Stop Loss</span>
+                                <strong class="text-danger" id="scalp-opt-sl">-2.0%</strong>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="p-2 rounded bg-dark border border-secondary">
+                                <span class="small text-muted d-block">Max Hold</span>
+                                <strong class="text-white" id="scalp-opt-hold">24h</strong>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-between pt-2 border-top border-secondary small text-muted">
+                        <div>Win Rate: <strong class="text-success" id="scalp-opt-win-rate">—</strong></div>
+                        <div>Profit Factor: <strong class="text-white" id="scalp-opt-profit-factor">—</strong></div>
+                        <div>Sharpe: <strong class="text-white" id="scalp-opt-sharpe">—</strong></div>
+                        <div>Max DD: <strong class="text-danger" id="scalp-opt-drawdown">—</strong></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
     </div>
 
     <!-- TAB 2: AI Radar & Technical Analyst -->

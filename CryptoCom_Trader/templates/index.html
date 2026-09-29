@@ -1,0 +1,966 @@
+{% extends "base.html" %}
+{% block title %}Crypto.com AI Pro Trader & Strategy Hub{% endblock %}
+
+{% block body %}
+<main class="trader-shell my-3" id="crypto-trader"
+      data-status-url="/api/status"
+      data-mode-url="/api/mode"
+      data-credentials-url="/api/credentials"
+      data-portfolio-url="/api/portfolio"
+      data-market-url="/api/market/__INSTRUMENT__"
+      data-candles-url="/api/candles/__INSTRUMENT__"
+      data-order-create-url="/api/order/create"
+      data-order-cancel-url="/api/order/cancel"
+      data-order-cancel-all-url="/api/order/cancel-all"
+      data-open-orders-url="/api/orders/open"
+      data-order-history-url="/api/orders/history"
+      data-paper-reset-url="/api/paper/reset"
+      data-strategies-url="/api/strategies"
+      data-grid-start-url="/api/strategy/grid/start"
+      data-grid-stop-url="/api/strategy/grid/stop"
+      data-dca-start-url="/api/strategy/dca/start"
+      data-dca-stop-url="/api/strategy/dca/stop"
+      data-radar-start-url="/api/strategy/radar/start"
+      data-radar-stop-url="/api/strategy/radar/stop"
+      data-ai-copilot-url="/api/copilot/chat"
+      data-ai-radar-url="/api/ai/radar"
+      data-ai-execute-url="/api/ai/execute-action">
+
+    <!-- Top Navigation Header & Status Bar -->
+    <header class="trader-hero">
+        <div class="hero-left">
+            <div class="d-flex align-items-center gap-2 mb-1">
+                <span class="crypto-badge"><i class="fas fa-bolt mr-1"></i> CRYPTO.COM PRO</span>
+                <span class="mode-pill paper" id="mode-badge">
+                    <span class="dot"></span> <span id="mode-text">PAPER TRADING</span>
+                </span>
+            </div>
+            <h1>Exchange Pro & Strategy Studio</h1>
+            <p class="hero-sub">Execute spot orders, simulate live order books, and run automated Grid, DCA, and Radar Momentum bots.</p>
+        </div>
+        <div class="hero-right">
+            <div class="portfolio-banner">
+                <div class="equity-col">
+                    <span class="equity-lbl">ESTIMATED NET WORTH</span>
+                    <div class="equity-val" id="total-equity">$10,000.00 <small>USDT</small></div>
+                    <span class="pnl-tag text-success" id="unrealized-pnl">+0.00% ($0.00)</span>
+                </div>
+                <div class="btn-group ml-3">
+                    <button class="btn btn-mode-toggle" id="btn-toggle-mode" title="Toggle between Paper Simulation and Live Crypto.com Trading">
+                        <i class="fas fa-repeat"></i> <span id="mode-toggle-text">Switch to Live</span>
+                    </button>
+                    <button class="btn btn-trader-gear" id="btn-open-settings" title="API Credentials & Configuration">
+                        <i class="fas fa-gear"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Market Selector Bar -->
+    <section class="market-bar mt-3">
+        <div class="pairs-scroll" id="pairs-container">
+            <button class="pair-chip active" data-pair="BTC_USDT">BTC/USDT <span class="price-span" id="chip-BTC_USDT">—</span></button>
+            <button class="pair-chip" data-pair="ETH_USDT">ETH/USDT <span class="price-span" id="chip-ETH_USDT">—</span></button>
+            <button class="pair-chip" data-pair="CRO_USDT">CRO/USDT <span class="price-span" id="chip-CRO_USDT">—</span></button>
+            <button class="pair-chip" data-pair="SOL_USDT">SOL/USDT <span class="price-span" id="chip-SOL_USDT">—</span></button>
+            <button class="pair-chip" data-pair="XRP_USDT">XRP/USDT <span class="price-span" id="chip-XRP_USDT">—</span></button>
+        </div>
+        <div class="pair-stats" id="active-pair-stats">
+            <div class="stat-item"><small>LAST PRICE</small><strong id="stat-last">—</strong></div>
+            <div class="stat-item"><small>24H CHANGE</small><strong id="stat-change">—</strong></div>
+            <div class="stat-item"><small>24H HIGH</small><strong id="stat-high">—</strong></div>
+            <div class="stat-item"><small>24H LOW</small><strong id="stat-low">—</strong></div>
+            <div class="stat-item"><small>24H VOL (USDT)</small><strong id="stat-vol">—</strong></div>
+        </div>
+    </section>
+
+    <!-- Strategy & Trading Navigation Tabs -->
+    <nav class="trader-nav-tabs mt-3">
+        <button class="tab-link active" data-tab="terminal"><i class="fas fa-chart-line mr-2"></i>Pro Terminal</button>
+        <button class="tab-link" data-tab="seconds"><i class="fas fa-bolt text-warning mr-2"></i>Seconds Scalper</button>
+        <button class="tab-link" data-tab="radar"><i class="fas fa-radar mr-2"></i>AI Radar Momentum</button>
+        <button class="tab-link" data-tab="grid"><i class="fas fa-border-all mr-2"></i>Grid Trading Bot</button>
+        <button class="tab-link" data-tab="dca"><i class="fas fa-piggy-bank mr-2"></i>DCA Accumulator</button>
+        <button class="tab-link" data-tab="portfolio"><i class="fas fa-wallet mr-2"></i>Portfolio Ledger</button>
+    </nav>
+
+    <!-- TAB 1: Pro Trading Terminal -->
+    <div class="tab-pane active mt-3" id="tab-terminal">
+        <div class="terminal-grid">
+            <!-- Left: Interactive Candlestick Chart -->
+            <div class="chart-card">
+                <div class="chart-toolbar">
+                    <div class="d-flex align-items-center gap-2">
+                        <strong class="text-gold" id="chart-symbol">BTC_USDT</strong>
+                        <div class="btn-group btn-group-sm timeframe-buttons" id="timeframe-group">
+                            <button class="btn btn-outline-secondary" data-tf="15m">15m</button>
+                            <button class="btn btn-outline-secondary active" data-tf="1h">1h</button>
+                            <button class="btn btn-outline-secondary" data-tf="4h">4h</button>
+                            <button class="btn btn-outline-secondary" data-tf="1D">1D</button>
+                        </div>
+                    </div>
+                    <div class="chart-meta">
+                        <span id="chart-ohlc">O: — H: — L: — C: —</span>
+                    </div>
+                </div>
+                <div class="chart-canvas-container">
+                    <canvas id="candleCanvas" width="800" height="380"></canvas>
+                </div>
+            </div>
+
+            <!-- Center: Visual Order Book Depth -->
+            <div class="orderbook-card">
+                <div class="card-head">
+                    <h3><i class="fas fa-layer-group text-info mr-2"></i>Order Book</h3>
+                    <small class="text-muted">Crypto.com Pro Depth</small>
+                </div>
+                <div class="orderbook-headers">
+                    <span>Price (USDT)</span>
+                    <span class="text-right">Size</span>
+                </div>
+                <!-- Asks (Red) -->
+                <div class="book-list asks-list" id="book-asks">
+                    <div class="book-row empty">Loading asks…</div>
+                </div>
+                <!-- Current Spread Banner -->
+                <div class="book-mid" id="book-mid">
+                    <span class="mid-price" id="mid-price">—</span>
+                    <span class="spread-tag" id="book-spread">Spread: — bps</span>
+                </div>
+                <!-- Bids (Green) -->
+                <div class="book-list bids-list" id="book-bids">
+                    <div class="book-row empty">Loading bids…</div>
+                </div>
+            </div>
+
+            <!-- Right: Order Placement Console -->
+            <div class="orderform-card">
+                <div class="card-head">
+                    <h3><i class="fas fa-arrow-right-arrow-left text-gold mr-2"></i>Place Order</h3>
+                    <span class="badge badge-secondary" id="order-mode-tag">PAPER</span>
+                </div>
+                <!-- Buy / Sell Side Switcher -->
+                <div class="order-side-toggle">
+                    <button class="btn-side buy active" id="btn-side-buy">BUY</button>
+                    <button class="btn-side sell" id="btn-side-sell">SELL</button>
+                </div>
+                <!-- Order Type Buttons -->
+                <div class="btn-group btn-group-sm w-100 my-2 order-type-group">
+                    <button class="btn btn-type active" data-type="MARKET">Market</button>
+                    <button class="btn btn-type" data-type="LIMIT">Limit</button>
+                    <button class="btn btn-type" data-type="STOP_LOSS">Stop</button>
+                </div>
+
+                <form id="form-order" onsubmit="return false;">
+                    <!-- Available balance row -->
+                    <div class="balance-row">
+                        <span>Available:</span>
+                        <strong id="avail-balance">10,000.00 USDT</strong>
+                    </div>
+
+                    <!-- Limit Price input (hidden for Market) -->
+                    <div class="form-group mb-2" id="group-price" style="display:none;">
+                        <label>Limit Price (USDT)</label>
+                        <input type="number" step="any" class="form-control trader-input" id="order-price" placeholder="Enter limit price">
+                    </div>
+
+                    <!-- Quantity input -->
+                    <div class="form-group mb-2">
+                        <label>Quantity (<span id="base-symbol">BTC</span>)</label>
+                        <input type="number" step="any" class="form-control trader-input" id="order-qty" placeholder="0.00">
+                    </div>
+
+                    <!-- Percentage Quick Slider Buttons -->
+                    <div class="percent-buttons">
+                        <button type="button" class="btn-pct" data-pct="25">25%</button>
+                        <button type="button" class="btn-pct" data-pct="50">50%</button>
+                        <button type="button" class="btn-pct" data-pct="75">75%</button>
+                        <button type="button" class="btn-pct" data-pct="100">100%</button>
+                    </div>
+
+                    <!-- Order Total & Fee Estimation -->
+                    <div class="order-summary mt-3">
+                        <div class="summary-line"><span>Order Value:</span><strong id="order-notional">0.00 USDT</strong></div>
+                        <div class="summary-line"><span>Est. Fee (0.075%):</span><strong id="order-fee">0.00 USDT</strong></div>
+                    </div>
+
+                    <button type="submit" class="btn btn-submit-order buy mt-3" id="btn-execute-order">
+                        <i class="fas fa-check-circle mr-1"></i> Buy <span id="submit-symbol">BTC</span>
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Open Orders and History Tables -->
+        <div class="orders-section mt-4">
+            <div class="card trader-card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <ul class="nav nav-tabs card-header-tabs" id="order-table-tabs">
+                        <li class="nav-item">
+                            <a class="nav-link active" data-subtab="open-orders" href="javascript:void(0)">Open Orders (<span id="count-open-orders">0</span>)</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" data-subtab="order-history" href="javascript:void(0)">Execution History (<span id="count-order-history">0</span>)</a>
+                        </li>
+                    </ul>
+                    <button class="btn btn-sm btn-outline-danger" id="btn-cancel-all"><i class="fas fa-ban"></i> Cancel All Open</button>
+                </div>
+                <div class="card-body p-0">
+                    <!-- Open Orders Table -->
+                    <div class="table-responsive" id="table-open-orders-wrap">
+                        <table class="table trader-table mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Time</th>
+                                    <th>Instrument</th>
+                                    <th>Type</th>
+                                    <th>Side</th>
+                                    <th>Price</th>
+                                    <th>Quantity</th>
+                                    <th>Status</th>
+                                    <th class="text-right">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="open-orders-tbody">
+                                <tr><td colspan="8" class="text-center text-muted py-4">No active open orders</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <!-- Order History Table -->
+                    <div class="table-responsive" id="table-order-history-wrap" style="display:none;">
+                        <table class="table trader-table mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Time</th>
+                                    <th>Instrument</th>
+                                    <th>Type</th>
+                                    <th>Side</th>
+                                    <th>Price</th>
+                                    <th>Quantity</th>
+                                    <th>Total (USDT)</th>
+                                    <th>Fee</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="order-history-tbody">
+                                <tr><td colspan="9" class="text-center text-muted py-4">No trade history yet</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TAB: Seconds Scalper (AI Fast-Cycle Trading) -->
+    <div class="tab-pane mt-3" id="tab-seconds">
+        <div class="strategy-banner mb-3">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <div>
+                    <h2><i class="fas fa-bolt text-warning mr-2"></i>Seconds Scalper <span class="badge badge-warning-soft ml-2">AI Powered</span></h2>
+                    <p class="text-muted mb-0">High-speed 30s, 60s, & 120s micro-trading with real-time Antigravity AI direction advice, sub-second countdown, and early cashout.</p>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <div class="btn-group btn-group-sm" id="seconds-pair-selector">
+                        <button class="btn btn-dark active" data-pair="BTC_USDT">BTC</button>
+                        <button class="btn btn-dark" data-pair="ETH_USDT">ETH</button>
+                        <button class="btn btn-dark" data-pair="SOL_USDT">SOL</button>
+                        <button class="btn btn-dark" data-pair="CRO_USDT">CRO</button>
+                        <button class="btn btn-dark" data-pair="DOGE_USDT">DOGE</button>
+                    </div>
+                    <button class="btn btn-sm btn-gold" id="btn-refresh-seconds-advice"><i class="fas fa-sync-alt mr-1"></i> Refresh AI</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- TradingView Live Candlestick & Technicals Embed -->
+        <div class="card trader-card p-3 mb-3">
+            <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="badge badge-dark text-gold font-weight-bold"><i class="fas fa-chart-candlestick mr-1"></i> TradingView Live Data</span>
+                    <strong class="text-white font-mono" id="tv-seconds-symbol-lbl">CRYPTOCOM:BTCUSDT</strong>
+                    <span class="small text-muted d-none d-md-inline">• Real-time micro-candlesticks, RSI & order flow</span>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <span class="small text-muted font-mono">Interval:</span>
+                    <div class="btn-group btn-group-sm" id="tv-timeframe-selector">
+                        <button class="btn btn-dark active" data-tf="1">1m</button>
+                        <button class="btn btn-dark" data-tf="3">3m</button>
+                        <button class="btn btn-dark" data-tf="5">5m</button>
+                    </div>
+                </div>
+            </div>
+            <div id="tradingview_seconds_container" style="height: 380px; width: 100%; border-radius: 8px; overflow: hidden; background: #070709;">
+                <div id="tradingview_seconds_chart" style="height: 100%; width: 100%;"></div>
+            </div>
+        </div>
+
+        <!-- Top Row: Live AI Micro-Advice + Fast Scalp Execution Console -->
+        <div class="row mb-3">
+            <!-- Left: AI Micro-Advisor & Tape Imbalance -->
+            <div class="col-lg-6 mb-3">
+                <div class="card trader-card p-4 h-100 seconds-advisor-card">
+                    <!-- AI Engine Selector -->
+                    <div class="d-flex justify-content-between align-items-center mb-3 p-2 rounded bg-dark border border-secondary flex-wrap gap-2">
+                        <span class="small text-muted font-weight-bold"><i class="fas fa-microchip text-gold mr-1"></i> AI MODEL:</span>
+                        <div class="btn-group btn-group-sm" id="seconds-ai-engine-selector">
+                            <button class="btn btn-dark active" data-engine="antigravity" title="Google Gemini 3.6 Flash ultra-fast tape model"><i class="fas fa-bolt text-warning mr-1"></i> Antigravity AI</button>
+                            <button class="btn btn-dark" data-engine="codex" title="OpenAI GPT-4o structural momentum reasoning"><i class="fas fa-robot text-info mr-1"></i> Codex AI</button>
+                            <button class="btn btn-dark" data-engine="consensus" title="Both Antigravity and Codex must confirm direction"><i class="fas fa-shield-halved text-success mr-1"></i> Dual Consensus</button>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <span class="text-muted small text-uppercase letter-spacing-1">
+                            <i class="fas fa-brain text-gold mr-1"></i> <span id="sec-model-lbl">Antigravity AI</span> Micro-Signal (<span id="sec-active-symbol">BTC_USDT</span>)
+                        </span>
+                        <span class="badge badge-dark" id="sec-ai-status-badge"><i class="fas fa-circle text-success mr-1"></i> Live Stream</span>
+                    </div>
+
+                    <div class="seconds-signal-display text-center py-3">
+                        <div class="seconds-signal-badge-wrap">
+                            <span class="seconds-signal-pill signal-call" id="sec-signal-direction">CALL / LONG 🚀</span>
+                        </div>
+                        <div class="seconds-prob-wrap mt-3">
+                            <div class="d-flex justify-content-between text-muted small mb-1">
+                                <span>AI Win Probability</span>
+                                <strong class="text-white" id="sec-prob-text">78%</strong>
+                            </div>
+                            <div class="progress progress-dark" style="height: 10px; border-radius: 6px;">
+                                <div class="progress-bar bg-gradient-success" id="sec-prob-bar" style="width: 78%; transition: width 0.4s ease;"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="seconds-micro-metrics mt-3">
+                        <div class="row text-center">
+                            <div class="col-4 stat-box p-2">
+                                <small class="text-muted d-block">ORDERBOOK SKEW</small>
+                                <strong class="font-weight-bold text-white" id="sec-metric-depth">1.35x Bid</strong>
+                            </div>
+                            <div class="col-4 stat-box p-2">
+                                <small class="text-muted d-block">TAKER VOLUME</small>
+                                <strong class="font-weight-bold text-success" id="sec-metric-taker">62% Buy</strong>
+                            </div>
+                            <div class="col-4 stat-box p-2">
+                                <small class="text-muted d-block">MICRO TICK BIAS</small>
+                                <strong class="font-weight-bold text-gold" id="sec-metric-tick">Bullish ▲</strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="seconds-rationale-box mt-3 p-3" id="sec-rationale-box">
+                        <i class="fas fa-quote-left text-muted mr-1"></i>
+                        <span id="sec-rationale-text">Analyzing live order book depth and recent taker flow for BTC_USDT…</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right: Fast Execution Console -->
+            <div class="col-lg-6 mb-3">
+                <div class="card trader-card p-4 h-100 seconds-console-card">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h4 class="text-gold m-0"><i class="fas fa-stopwatch mr-2"></i>Flash Scalp Console</h4>
+                        <div class="trading-mode-tag">
+                            <span class="badge badge-info" id="sec-mode-badge">PAPER SIMULATION</span>
+                        </div>
+                    </div>
+
+                    <!-- Duration Selector -->
+                    <div class="form-group mb-3">
+                        <label class="small text-muted text-uppercase letter-spacing-1 font-weight-bold">Select Expiration Cycle</label>
+                        <div class="btn-group w-100 seconds-duration-group" id="seconds-duration-group">
+                            <button type="button" class="btn btn-dark" data-duration="15">15s</button>
+                            <button type="button" class="btn btn-dark active" data-duration="30">30s (Optimal)</button>
+                            <button type="button" class="btn btn-dark" data-duration="60">60s</button>
+                            <button type="button" class="btn btn-dark" data-duration="120">120s</button>
+                            <button type="button" class="btn btn-dark" data-duration="300">5m</button>
+                        </div>
+                    </div>
+
+                    <!-- Stake Input & Quick Chips -->
+                    <div class="form-group mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <label class="small text-muted text-uppercase letter-spacing-1 font-weight-bold">Stake (USDT)</label>
+                            <span class="small text-muted">Avail: <strong class="text-white" id="sec-avail-usdt">$10,000.00</strong></span>
+                        </div>
+                        <div class="input-group">
+                            <div class="input-group-prepend"><span class="input-group-text bg-dark border-secondary text-muted">$</span></div>
+                            <input type="number" class="form-control trader-input font-weight-bold" id="seconds-stake-input" value="10" min="1" step="1">
+                        </div>
+                        <div class="seconds-quick-chips mt-2 d-flex gap-2">
+                            <button type="button" class="btn btn-sm btn-outline-secondary sec-chip" data-stake="5">$5</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary sec-chip active" data-stake="10">$10</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary sec-chip" data-stake="25">$25</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary sec-chip" data-stake="50">$50</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary sec-chip" data-stake="100">$100</button>
+                        </div>
+                    </div>
+
+                    <!-- Payout & Return Indicator -->
+                    <div class="payout-indicator-box p-2 mb-3 rounded d-flex justify-content-between align-items-center">
+                        <span class="small text-muted"><i class="fas fa-coins text-warning mr-1"></i> Potential Profit (+85%):</span>
+                        <strong class="text-success h5 m-0" id="sec-potential-profit">+$8.50 USDT</strong>
+                    </div>
+
+                    <!-- Action Flash Buttons -->
+                    <div class="d-flex gap-3 mt-auto">
+                        <button class="btn btn-flash-call w-100 py-3" id="btn-flash-call">
+                            <div class="d-flex flex-column align-items-center">
+                                <span class="flash-btn-title"><i class="fas fa-arrow-trend-up mr-1"></i> FLASH CALL</span>
+                                <small class="flash-btn-sub">BET HIGHER (LONG)</small>
+                            </div>
+                        </button>
+                        <button class="btn btn-flash-put w-100 py-3" id="btn-flash-put">
+                            <div class="d-flex flex-column align-items-center">
+                                <span class="flash-btn-title"><i class="fas fa-arrow-trend-down mr-1"></i> FLASH PUT</span>
+                                <small class="flash-btn-sub">BET LOWER (SHORT)</small>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Autonomous AI Auto-Pilot Console -->
+        <div class="card trader-card p-4 mb-3 border-warning-subtle" id="seconds-autopilot-card">
+            <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
+                <div>
+                    <h4 class="text-gold m-0 d-flex align-items-center">
+                        <i class="fas fa-robot text-warning mr-2"></i>Autonomous AI Scalper (Auto-Pilot)
+                        <span class="badge badge-secondary ml-2" id="sec-autopilot-badge">STANDBY (OFF)</span>
+                    </h4>
+                    <p class="text-muted small mb-0">Allow Antigravity or Codex AI to automatically execute seconds trades upon detecting high-conviction micro-signals.</p>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <button class="btn btn-sm btn-outline-warning" id="btn-toggle-autopilot">
+                        <i class="fas fa-power-off mr-1"></i> <span id="autopilot-toggle-label">Start Auto-Pilot</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="row align-items-center mt-3 pt-2 border-top border-secondary small">
+                <div class="col-md-4 mb-2 mb-md-0">
+                    <span class="text-muted d-block font-weight-bold">AUTONOMOUS OPERATOR:</span>
+                    <select class="form-control trader-input mt-1" id="autopilot-engine-select">
+                        <option value="antigravity" selected>⚡ Antigravity AI (Gemini 3.6)</option>
+                        <option value="codex">🧠 Codex AI (OpenAI GPT-4o)</option>
+                        <option value="consensus">🛡️ Dual AI Consensus (Both Must Agree)</option>
+                    </select>
+                </div>
+                <div class="col-md-4 mb-2 mb-md-0">
+                    <span class="text-muted d-block font-weight-bold">MIN CONFIDENCE TRIGGER:</span>
+                    <div class="btn-group btn-group-sm w-100 mt-1" id="autopilot-conf-selector">
+                        <button class="btn btn-dark" data-conf="65">65% (Aggressive)</button>
+                        <button class="btn btn-dark active" data-conf="72">72% (Balanced)</button>
+                        <button class="btn btn-dark" data-conf="80">80% (High Conviction)</button>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <span class="text-muted d-block font-weight-bold">LIVE AUTO-PILOT TELEMETRY:</span>
+                    <div class="autopilot-status-box p-2 mt-1 rounded bg-dark border border-secondary text-truncate" id="autopilot-status-narrative">
+                        <i class="fas fa-pause text-muted mr-1"></i> Auto-Pilot currently stopped
+                    </div>
+                </div>
+            </div>
+            <div class="d-flex justify-content-between align-items-center mt-2 pt-2 border-top border-secondary text-muted small">
+                <span><i class="fas fa-shield-halved text-info mr-1"></i> Safety Guard: Maximum 1 concurrent in-flight trade • Paper simulation protected</span>
+                <span>Auto-Scalps Executed: <strong class="text-white" id="autopilot-total-trades">0</strong></span>
+            </div>
+        </div>
+
+        <!-- Middle: Active Scalps Live Ring & Countdown -->
+        <div class="card trader-card p-4 mb-3">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h4 class="text-gold m-0">
+                    <i class="fas fa-wave-square mr-2"></i>Active Seconds Trades
+                    <span class="badge badge-dark ml-2" id="sec-active-count-badge">0 Active</span>
+                </h4>
+                <span class="small text-muted"><i class="fas fa-shield-halved text-info mr-1"></i> Auto-settles at countdown expiry • Cash out anytime</span>
+            </div>
+
+            <div id="seconds-active-cards-container" class="seconds-cards-grid">
+                <!-- Empty State -->
+                <div class="seconds-empty-state text-center py-4" id="seconds-empty-state">
+                    <i class="fas fa-stopwatch text-muted fa-3x mb-3"></i>
+                    <h5 class="text-white">No Active Seconds Scalps</h5>
+                    <p class="text-muted small mb-0">Choose your stake and duration, then click <strong>FLASH CALL</strong> or <strong>FLASH PUT</strong> to begin a micro-cycle.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom: Win/Loss Ledger & Scalp Stats -->
+        <div class="card trader-card p-4">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+                <h4 class="text-gold m-0"><i class="fas fa-clock-rotate-left mr-2"></i>Seconds Scalper Performance Ledger</h4>
+                <div class="seconds-stats-bar d-flex align-items-center gap-3">
+                    <span class="small text-muted">Total Scalps: <strong class="text-white" id="sec-stat-total">0</strong></span>
+                    <span class="small text-muted">Win Rate: <strong class="text-success" id="sec-stat-winrate">0.0%</strong></span>
+                    <span class="small text-muted">Wins/Losses: <strong class="text-white" id="sec-stat-wl">0W / 0L</strong></span>
+                    <span class="small text-muted">Net PnL: <strong class="text-gold" id="sec-stat-pnl">$0.00</strong></span>
+                </div>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table trader-table mb-0">
+                    <thead>
+                        <tr>
+                            <th>Trade ID</th>
+                            <th>Pair</th>
+                            <th>Direction</th>
+                            <th>Duration</th>
+                            <th>Stake</th>
+                            <th>AI Operator</th>
+                            <th>Entry Px</th>
+                            <th>Exit Px</th>
+                            <th>Net PnL</th>
+                            <th>Status</th>
+                            <th>Settled</th>
+                        </tr>
+                    </thead>
+                    <tbody id="seconds-history-tbody">
+                        <tr><td colspan="11" class="text-center text-muted py-4">No scalps executed yet in this session.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- TAB 2: AI Radar & Technical Analyst -->
+    <div class="tab-pane mt-3" id="tab-radar" style="display:none;">
+        <div class="strategy-banner mb-3">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <div>
+                    <h2><i class="fas fa-satellite-dish text-gold mr-2"></i>AI Market Radar & Technical Analyst</h2>
+                    <p class="text-muted mb-0">Autonomous multi-factor algorithmic engine synthesizing Order Book Depth, Candlestick Momentum, RSI, and Dynamic Breakout Targets.</p>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <div class="btn-group btn-group-sm" id="radar-pair-selector">
+                        <button class="btn btn-dark active" data-pair="BTC_USDT">BTC</button>
+                        <button class="btn btn-dark" data-pair="ETH_USDT">ETH</button>
+                        <button class="btn btn-dark" data-pair="SOL_USDT">SOL</button>
+                        <button class="btn btn-dark" data-pair="CRO_USDT">CRO</button>
+                        <button class="btn btn-dark" data-pair="DOGE_USDT">DOGE</button>
+                    </div>
+                    <button class="btn btn-sm btn-gold" id="btn-refresh-radar"><i class="fas fa-sync-alt mr-1"></i> Scan Now</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Radar Metric Cards -->
+        <div class="row mb-3">
+            <!-- Signal Card -->
+            <div class="col-lg-4 mb-3">
+                <div class="card trader-card p-3 h-100 radar-signal-card text-center">
+                    <div class="text-muted small text-uppercase letter-spacing-1 mb-2">Overall Market Bias (<span id="radar-symbol">BTC_USDT</span>)</div>
+                    <div class="my-2">
+                        <span class="radar-signal-pill" id="radar-signal-badge">ANALYZING…</span>
+                    </div>
+                    <div class="confidence-box mt-3">
+                        <div class="d-flex justify-content-between small text-muted mb-1">
+                            <span>AI Confidence Score</span>
+                            <strong class="text-white" id="radar-confidence-val">--%</strong>
+                        </div>
+                        <div class="progress progress-dark" style="height: 8px;">
+                            <div class="progress-bar bg-gold" id="radar-confidence-bar" style="width: 0%;"></div>
+                        </div>
+                    </div>
+                    <div class="small text-muted mt-2" id="radar-last-scan-time">Updated just now</div>
+                </div>
+            </div>
+
+            <!-- Liquidity & Depth Card -->
+            <div class="col-lg-4 mb-3">
+                <div class="card trader-card p-3 h-100">
+                    <div class="text-muted small text-uppercase letter-spacing-1 mb-2"><i class="fas fa-layer-group text-info mr-1"></i> Order Book Pressure</div>
+                    <div class="d-flex justify-content-between align-items-baseline mb-2">
+                        <h3 class="mb-0 font-weight-bold" id="radar-depth-ratio">--</h3>
+                        <span class="badge badge-dark" id="radar-depth-status">Calculating…</span>
+                    </div>
+                    <div class="progress progress-dark mb-2" style="height: 10px;">
+                        <div class="progress-bar bg-success" id="radar-depth-bids" style="width: 50%;" title="Bids"></div>
+                        <div class="progress-bar bg-danger" id="radar-depth-asks" style="width: 50%;" title="Asks"></div>
+                    </div>
+                    <div class="d-flex justify-content-between small text-muted">
+                        <span><i class="fas fa-arrow-up text-success mr-1"></i>Bid Depth</span>
+                        <span>Ask Depth<i class="fas fa-arrow-down text-danger ml-1"></i></span>
+                    </div>
+                    <div class="mt-3 pt-2 border-top border-secondary d-flex justify-content-between small">
+                        <span class="text-muted">Spread:</span>
+                        <strong class="text-white" id="radar-spread-val">-- bps</strong>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Key Indicators Card -->
+            <div class="col-lg-4 mb-3">
+                <div class="card trader-card p-3 h-100">
+                    <div class="text-muted small text-uppercase letter-spacing-1 mb-2"><i class="fas fa-chart-line text-warning mr-1"></i> Technical Indicators</div>
+                    <div class="radar-indicator-row">
+                        <span>14-Period RSI:</span>
+                        <span class="font-weight-bold" id="radar-rsi-val">--</span>
+                    </div>
+                    <div class="radar-indicator-row">
+                        <span>Volatility ATR:</span>
+                        <span class="font-weight-bold" id="radar-atr-val">--</span>
+                    </div>
+                    <div class="radar-indicator-row">
+                        <span>24h Price Change:</span>
+                        <span class="font-weight-bold" id="radar-change-val">--</span>
+                    </div>
+                    <div class="radar-indicator-row">
+                        <span>Current Price:</span>
+                        <span class="font-weight-bold text-gold" id="radar-price-val">--</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Price Targets & Narrative Row -->
+        <div class="row mb-3">
+            <!-- Dynamic Targets Grid -->
+            <div class="col-lg-7 mb-3">
+                <div class="card trader-card p-4 h-100">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h4 class="text-gold mb-0"><i class="fas fa-crosshairs mr-2"></i>Dynamic Price Targets & Setup</h4>
+                        <span class="badge badge-secondary">Algorithmic</span>
+                    </div>
+
+                    <div class="targets-grid">
+                        <div class="target-item resistance">
+                            <div class="target-label">Resistance 2 (R2)</div>
+                            <div class="target-price" id="target-r2">$--</div>
+                            <div class="target-desc">Secondary Breakout Target</div>
+                        </div>
+                        <div class="target-item resistance">
+                            <div class="target-label">Resistance 1 (R1)</div>
+                            <div class="target-price" id="target-r1">$--</div>
+                            <div class="target-desc">Immediate Overhead Supply</div>
+                        </div>
+                        <div class="target-item entry active">
+                            <div class="target-label">Recommended Entry</div>
+                            <div class="target-price" id="target-entry">$--</div>
+                            <div class="target-desc">Optimal Accumulation Zone</div>
+                        </div>
+                        <div class="target-item support">
+                            <div class="target-label">Support 1 (S1)</div>
+                            <div class="target-price" id="target-s1">$--</div>
+                            <div class="target-desc">Key Structural Floor</div>
+                        </div>
+                        <div class="target-item support">
+                            <div class="target-label">Support 2 (S2)</div>
+                            <div class="target-price" id="target-s2">$--</div>
+                            <div class="target-desc">Major Liquidity Pool</div>
+                        </div>
+                        <div class="target-item stoploss">
+                            <div class="target-label">Stop-Loss Target</div>
+                            <div class="target-price" id="target-sl">$--</div>
+                            <div class="target-desc">Risk Mitigation Cutoff</div>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 pt-3 border-top border-secondary d-flex gap-2">
+                        <button class="btn btn-gold w-100" id="btn-apply-radar-setup">
+                            <i class="fas fa-bolt mr-1"></i> Apply Setup to Order Form
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Narrative Synthesis & Bot Controls -->
+            <div class="col-lg-5 mb-3">
+                <div class="card trader-card p-4 h-100 d-flex flex-column justify-content-between">
+                    <div>
+                        <h4 class="text-gold mb-3"><i class="fas fa-brain mr-2"></i>AI Technical Synthesis</h4>
+                        <div class="radar-narrative-box mb-3" id="radar-narrative-text">
+                            Loading AI market analysis narrative…
+                        </div>
+                    </div>
+
+                    <div class="radar-bot-quick-box p-3 rounded">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="font-weight-bold text-white"><i class="fas fa-robot text-gold mr-1"></i> Automated Momentum Bot</span>
+                            <span class="bot-badge" id="radar-bot-badge">STOPPED</span>
+                        </div>
+                        <div class="d-flex gap-2 mt-2">
+                            <button class="btn btn-sm btn-outline-warning w-100" id="btn-start-radar"><i class="fas fa-play mr-1"></i> Start Bot</button>
+                            <button class="btn btn-sm btn-outline-danger w-100" id="btn-stop-radar" disabled><i class="fas fa-stop mr-1"></i> Stop</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TAB 3: Grid Trading Bot -->
+    <div class="tab-pane mt-3" id="tab-grid" style="display:none;">
+        <div class="strategy-banner mb-3">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2><i class="fas fa-border-all text-info mr-2"></i>Automated Grid Trading Bot</h2>
+                    <p class="text-muted mb-0">Harvests volatility by deploying staggered buy-low and sell-high limit orders within a defined price channel.</p>
+                </div>
+                <div class="status-indicator">
+                    <span class="bot-badge" id="grid-bot-badge">STOPPED</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-lg-5 mb-3">
+                <div class="card trader-card p-4">
+                    <h4 class="text-gold mb-3">Grid Configuration</h4>
+                    <div class="form-group">
+                        <label>Target Instrument</label>
+                        <select class="form-control trader-input" id="grid-instrument">
+                            <option value="BTC_USDT">BTC_USDT</option>
+                            <option value="ETH_USDT">ETH_USDT</option>
+                            <option value="CRO_USDT">CRO_USDT</option>
+                            <option value="SOL_USDT">SOL_USDT</option>
+                        </select>
+                    </div>
+                    <div class="row">
+                        <div class="col-6 form-group">
+                            <label>Lower Price (USDT)</label>
+                            <input type="number" step="any" class="form-control trader-input" id="grid-lower" placeholder="e.g. 60000">
+                        </div>
+                        <div class="col-6 form-group">
+                            <label>Upper Price (USDT)</label>
+                            <input type="number" step="any" class="form-control trader-input" id="grid-upper" placeholder="e.g. 70000">
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-6 form-group">
+                            <label>Grid Quantity (2 - 50)</label>
+                            <input type="number" class="form-control trader-input" id="grid-count" value="10" min="2" max="50">
+                        </div>
+                        <div class="col-6 form-group">
+                            <label>Total Investment (USDT)</label>
+                            <input type="number" step="any" class="form-control trader-input" id="grid-investment" value="100" min="10">
+                        </div>
+                    </div>
+                    <div class="grid-calc-summary p-3 my-2">
+                        <div class="d-flex justify-content-between"><small>Price Step per Grid:</small><strong id="grid-step-display">—</strong></div>
+                        <div class="d-flex justify-content-between"><small>Capital per Grid:</small><strong id="grid-cap-display">—</strong></div>
+                        <div class="d-flex justify-content-between"><small>Est. Profit per Grid:</small><strong class="text-success" id="grid-profit-est">—</strong></div>
+                    </div>
+                    <div class="d-flex gap-2 mt-3">
+                        <button class="btn btn-gold w-100" id="btn-start-grid"><i class="fas fa-play"></i> Launch Grid Bot</button>
+                        <button class="btn btn-outline-danger w-100" id="btn-stop-grid" disabled><i class="fas fa-stop"></i> Terminate Grid</button>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-7 mb-3">
+                <div class="card trader-card p-4">
+                    <h4 class="text-gold mb-3">Active Grid Visualization</h4>
+                    <div class="grid-levels-ladder" id="grid-levels-container">
+                        <div class="text-center text-muted py-5">Configure grid parameters on the left to preview levels</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TAB 4: DCA Accumulator Bot -->
+    <div class="tab-pane mt-3" id="tab-dca" style="display:none;">
+        <div class="strategy-banner mb-3">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2><i class="fas fa-piggy-bank text-success mr-2"></i>DCA (Dollar-Cost Averaging) Accumulator</h2>
+                    <p class="text-muted mb-0">Systematically accumulates crypto assets at set intervals with optional dynamic dip weighting.</p>
+                </div>
+                <div class="status-indicator">
+                    <span class="bot-badge" id="dca-bot-badge">STOPPED</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-lg-5 mb-3">
+                <div class="card trader-card p-4">
+                    <h4 class="text-gold mb-3">DCA Schedule Settings</h4>
+                    <div class="form-group">
+                        <label>Target Instrument</label>
+                        <select class="form-control trader-input" id="dca-instrument">
+                            <option value="BTC_USDT">BTC_USDT</option>
+                            <option value="ETH_USDT">ETH_USDT</option>
+                            <option value="CRO_USDT">CRO_USDT</option>
+                            <option value="SOL_USDT">SOL_USDT</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Purchase Amount per Order (USDT)</label>
+                        <input type="number" class="form-control trader-input" id="dca-amount" value="25" min="5">
+                    </div>
+                    <div class="form-group">
+                        <label>Execution Frequency</label>
+                        <select class="form-control trader-input" id="dca-interval">
+                            <option value="5">Every 5 Minutes (Fast Test)</option>
+                            <option value="60" selected>Hourly (Every 1 Hour)</option>
+                            <option value="240">Every 4 Hours</option>
+                            <option value="1440">Daily (Every 24 Hours)</option>
+                            <option value="10080">Weekly (Every 7 Days)</option>
+                        </select>
+                    </div>
+                    <div class="custom-control custom-switch mb-3">
+                        <input type="checkbox" class="custom-control-input" id="dca-dip-switch" checked>
+                        <label class="custom-control-label" for="dca-dip-switch">
+                            <strong>Dynamic Dip Multiplier</strong>
+                            <small class="d-block text-muted">Automatically boosts buy allocation by up to 1.5x when the market enters oversold levels.</small>
+                        </label>
+                    </div>
+                    <div class="d-flex gap-2 mt-3">
+                        <button class="btn btn-gold w-100" id="btn-start-dca"><i class="fas fa-play"></i> Start DCA Accumulation</button>
+                        <button class="btn btn-outline-danger w-100" id="btn-stop-dca" disabled><i class="fas fa-stop"></i> Halt DCA</button>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-7 mb-3">
+                <div class="card trader-card p-4">
+                    <h4 class="text-gold mb-3">Accumulation Portfolio Progress</h4>
+                    <div class="row text-center mb-3">
+                        <div class="col-4 stat-box p-3">
+                            <small class="text-muted d-block">TOTAL INVESTED</small>
+                            <strong class="h4 font-weight-bold" id="dca-total-invested">$0.00</strong>
+                        </div>
+                        <div class="col-4 stat-box p-3">
+                            <small class="text-muted d-block">ACCUMULATED TOKENS</small>
+                            <strong class="h4 font-weight-bold text-gold" id="dca-total-tokens">0.0000</strong>
+                        </div>
+                        <div class="col-4 stat-box p-3">
+                            <small class="text-muted d-block">AVG ACQUISITION PRICE</small>
+                            <strong class="h4 font-weight-bold text-success" id="dca-avg-price">$0.00</strong>
+                        </div>
+                    </div>
+                    <div class="card p-3 bg-dark">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span>Completed Orders:</span>
+                            <strong id="dca-exec-count">0 executions</strong>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center mt-2">
+                            <span>Last Execution:</span>
+                            <span id="dca-last-exec" class="text-muted">Never</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TAB 5: Portfolio Ledger -->
+    <div class="tab-pane mt-3" id="tab-portfolio" style="display:none;">
+        <div class="card trader-card p-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h3 class="text-gold m-0"><i class="fas fa-coins mr-2"></i>Asset Balances & Ledger</h3>
+                <button class="btn btn-sm btn-outline-warning" id="btn-reset-paper">
+                    <i class="fas fa-rotate-left"></i> Reset Paper Balance ($10,000)
+                </button>
+            </div>
+            <div class="table-responsive">
+                <table class="table trader-table mb-0">
+                    <thead>
+                        <tr>
+                            <th>Asset</th>
+                            <th>Total Balance</th>
+                            <th>Price (USDT)</th>
+                            <th>Value (USDT)</th>
+                            <th class="text-right">Allocation</th>
+                        </tr>
+                    </thead>
+                    <tbody id="portfolio-tbody">
+                        <tr><td colspan="5" class="text-center text-muted py-4">Loading balances…</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Floating AI Copilot Trigger Button -->
+    <button class="btn-copilot-trigger" id="btn-toggle-copilot" title="Open AI Trading Copilot">
+        <i class="fas fa-wand-magic-sparkles text-gold"></i>
+        <span>AI Copilot</span>
+        <span class="copilot-pulse-dot"></span>
+    </button>
+
+    <!-- AI Copilot Sliding Drawer -->
+    <div class="copilot-drawer" id="copilot-drawer">
+        <div class="copilot-header">
+            <div class="d-flex align-items-center">
+                <div class="copilot-avatar mr-2"><i class="fas fa-brain text-gold"></i></div>
+                <div>
+                    <h5 class="mb-0 text-white font-weight-bold">Crypto.com Copilot</h5>
+                    <small class="text-muted"><span class="badge badge-success-soft">● Online</span> <span id="copilot-provider-tag">AI Ready</span></small>
+                </div>
+            </div>
+            <button class="btn-copilot-close" id="btn-close-copilot"><i class="fas fa-times"></i></button>
+        </div>
+
+        <div class="copilot-quick-chips">
+            <button class="copilot-chip" data-prompt="Analyze current market momentum for BTC">📊 Analyze BTC</button>
+            <button class="copilot-chip" data-prompt="Buy $100 worth of BTC at market">⚡ Buy $100 BTC</button>
+            <button class="copilot-chip" data-prompt="What is my available balance and PnL?">💼 My Balances</button>
+            <button class="copilot-chip" data-prompt="Suggest an optimal limit buy entry for BTC">🎯 Suggest Entry</button>
+        </div>
+
+        <div class="copilot-body" id="copilot-chat-body">
+            <div class="copilot-msg assistant">
+                <div class="msg-bubble">
+                    <p class="mb-1"><strong>Hello! I am your Crypto.com Trading Copilot.</strong></p>
+                    <p class="mb-0 text-muted">You can ask me to analyze live order books, check your portfolio, or tell me to trade (e.g. <em>"Buy $100 BTC"</em> or <em>"Limit sell 0.05 BTC at $90,000"</em>). What would you like to do?</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="copilot-footer">
+            <form id="copilot-form" onsubmit="return false;">
+                <div class="input-group">
+                    <input type="text" class="form-control trader-input" id="copilot-input" placeholder="Ask AI or type a trade command..." autocomplete="off">
+                    <div class="input-group-append">
+                        <button class="btn btn-gold" type="submit" id="copilot-send-btn">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Settings & API Credentials Modal -->
+    <div class="modal fade" id="settingsModal" tabindex="-1" role="dialog" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content trader-modal">
+                <div class="modal-header">
+                    <h5 class="modal-title text-gold"><i class="fas fa-key mr-2"></i>Crypto.com Exchange API Settings</h5>
+                    <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-info">
+                        <i class="fas fa-shield-halved mr-1"></i> API keys are signed locally with HMAC-SHA256 and never transmitted to third parties. Required for Live Trading.
+                    </div>
+                    <div class="form-group">
+                        <label>Crypto.com API Key</label>
+                        <input type="text" class="form-control trader-input" id="input-api-key" placeholder="Enter API Key">
+                    </div>
+                    <div class="form-group">
+                        <label>Crypto.com API Secret</label>
+                        <input type="password" class="form-control trader-input" id="input-api-secret" placeholder="Enter API Secret">
+                    </div>
+                    <div id="credentials-feedback" class="mt-2"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-gold" id="btn-save-credentials"><i class="fas fa-save mr-1"></i> Save & Test Credentials</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification Container -->
+    <div id="toast-container" class="toast-fixed"></div>
+</main>
+
+<script src="{{ url_for('static', filename='js/crypto_com_trader.js') }}?v=standalone_smooth_ticker"></script>
+{% endblock body %}

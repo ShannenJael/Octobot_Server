@@ -35,9 +35,6 @@
     secondsHistory: "/crypto-com/api/seconds/history",
     secondsAutopilotStatus: "/crypto-com/api/seconds/autopilot/status",
     secondsAutopilotToggle: "/crypto-com/api/seconds/autopilot/toggle",
-    scalpTrain: "/crypto-com/api/seconds/train",
-    scalpModelStatus: "/crypto-com/api/seconds/model-status",
-    scalpOptimize: "/crypto-com/api/seconds/optimize",
   };
 
   // State
@@ -50,7 +47,7 @@
     lastPrice: 0,
     bestBid: 0,
     bestAsk: 0,
-    balances: { USDT: 20000 },
+    balances: { USDT: 10000 },
     candles: [],
     strategies: {},
     secondsPair: "BTC_USDT",
@@ -60,29 +57,9 @@
     tvInterval: "1",
     autopilotEnabled: false,
     autopilotConfidence: 72,
-    copilotHistory: [],
   };
 
   const $ = (id) => document.getElementById(id);
-
-  function escapeHtml(value) {
-    return String(value ?? "")
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#039;");
-  }
-
-  function formatSafeMarkdown(value) {
-    return escapeHtml(value)
-      .replace(/^### (.*$)/gim, '<strong class="text-gold d-block mb-1">$1</strong>')
-      .replace(/^## (.*$)/gim, '<strong class="text-gold d-block mb-1">$1</strong>')
-      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-      .replace(/\*(.*?)\*/g, '<em>$1</em>')
-      .replace(/\n\n/g, '<span class="d-block mb-2"></span>')
-      .replace(/\n/g, '<br>');
-  }
 
   function toast(msg, type = "info") {
     const container = $("toast-container");
@@ -90,11 +67,7 @@
     const div = document.createElement("div");
     div.className = "trader-toast";
     const icon = type === "error" ? "fa-triangle-exclamation text-danger" : (type === "success" ? "fa-circle-check text-success" : "fa-circle-info text-info");
-    const iconEl = document.createElement("i");
-    iconEl.className = `fas ${icon}`;
-    const textEl = document.createElement("span");
-    textEl.textContent = String(msg);
-    div.append(iconEl, textEl);
+    div.innerHTML = `<i class="fas ${icon}"></i> <span>${msg}</span>`;
     container.appendChild(div);
     setTimeout(() => {
       div.style.opacity = "0";
@@ -113,7 +86,6 @@
     setupCopilot();
     setupRadarTab();
     setupSecondsScalper();
-    setupScalpAIStudio();
 
     await fetchStatus();
     await refreshMarket();
@@ -272,26 +244,6 @@
       toggle.textContent = "Switch to Live";
       tag.textContent = "PAPER";
       tag.className = "badge badge-success";
-    }
-    updateSecondsExecutionSemantics();
-  }
-
-  function updateSecondsExecutionSemantics() {
-    const label = $("sec-potential-label");
-    const value = $("sec-potential-profit");
-    const putButton = $("btn-flash-put");
-    const putSubtitle = putButton?.querySelector(".flash-btn-sub");
-    const stake = parseFloat($("seconds-stake-input")?.value) || 0;
-    if (state.mode === "live") {
-      if (label) label.textContent = "Estimated live spot P&L:";
-      if (value) value.textContent = "Varies with market";
-      if (putButton) putButton.disabled = true;
-      if (putSubtitle) putSubtitle.textContent = "PAPER SIMULATION ONLY";
-    } else {
-      if (label) label.textContent = "Simulated payout (+85%):";
-      if (value) value.textContent = `+$${(stake * 0.85).toFixed(2)} USDT`;
-      if (putButton) putButton.disabled = false;
-      if (putSubtitle) putSubtitle.textContent = "BET LOWER (SHORT)";
     }
   }
 
@@ -699,15 +651,15 @@
   }
 
   $("btn-reset-paper")?.addEventListener("click", async () => {
-    if (!confirm("Reset paper balance to initial $20,000 USDT?")) return;
+    if (!confirm("Reset paper balance to initial $10,000 USDT?")) return;
     try {
       const res = await fetch(URLS.paperReset, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amount: 20000 }),
+        body: JSON.stringify({ amount: 10000 }),
       });
       if (res.ok) {
-        toast("Paper balance reset to $20,000 USDT", "success");
+        toast("Paper balance reset to $10,000 USDT", "success");
         refreshPortfolio();
         refreshOrders();
       }
@@ -1045,53 +997,41 @@
 
       // Append User message
       appendCopilotMessage("user", prompt);
-      const priorHistory = state.copilotHistory.slice(-10);
-      state.copilotHistory.push({ role: "user", content: prompt });
-      state.copilotHistory = state.copilotHistory.slice(-10);
 
       // Append Thinking bubble
-      const thinkingEl = appendCopilotMessage("assistant", "Analyzing market and compiling response...");
+      const thinkingEl = appendCopilotMessage("assistant", `<em><i class="fas fa-spinner fa-spin text-gold mr-1"></i> Analyzing market & compiling response…</em>`);
 
       try {
         const res = await fetch(URLS.aiCopilot, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            prompt,
-            instrument: state.pair,
-            conversation_history: priorHistory,
-          }),
+          body: JSON.stringify({ prompt, instrument: state.pair }),
         });
         const data = await res.json();
         thinkingEl.remove();
 
         if (res.ok) {
           appendCopilotAssistantResponse(data.reply, data.action_card);
-          state.copilotHistory.push({ role: "assistant", content: String(data.reply || "") });
-          state.copilotHistory = state.copilotHistory.slice(-10);
           if (data.provider) {
             const provTag = $("copilot-provider-tag");
             if (provTag) provTag.textContent = data.provider === "openai" ? "Codex / OpenAI" : (data.provider === "gemini" ? "Antigravity AI" : "AI Ready");
           }
         } else {
-          appendCopilotMessage("assistant", data.error || "Copilot encountered an issue processing request.");
+          appendCopilotMessage("assistant", `<span class="text-danger"><i class="fas fa-exclamation-circle mr-1"></i> ${data.error || "Copilot encountered an issue processing request."}</span>`);
         }
       } catch (err) {
         thinkingEl.remove();
-        appendCopilotMessage("assistant", `Failed to connect: ${err.message}`);
+        appendCopilotMessage("assistant", `<span class="text-danger"><i class="fas fa-triangle-exclamation mr-1"></i> Failed to connect: ${err.message}</span>`);
       }
     });
   }
 
-  function appendCopilotMessage(sender, content) {
+  function appendCopilotMessage(sender, htmlContent) {
     const body = $("copilot-chat-body");
     if (!body) return null;
     const msg = document.createElement("div");
     msg.className = `copilot-msg ${sender}`;
-    const bubble = document.createElement("div");
-    bubble.className = "msg-bubble";
-    bubble.textContent = String(content || "");
-    msg.appendChild(bubble);
+    msg.innerHTML = `<div class="msg-bubble">${htmlContent}</div>`;
     body.appendChild(msg);
     body.scrollTop = body.scrollHeight;
     return msg;
@@ -1101,32 +1041,34 @@
     const body = $("copilot-chat-body");
     if (!body) return;
 
-    const formatted = formatSafeMarkdown(markdownReply || "");
+    // Basic markdown conversion
+    let formatted = (markdownReply || "")
+      .replace(/^### (.*$)/gim, '<strong class="text-gold d-block mb-1">$1</strong>')
+      .replace(/^## (.*$)/gim, '<strong class="text-gold d-block mb-1">$1</strong>')
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.*?)\*/g, '<em>$1</em>')
+      .replace(/\n\n/g, '<p class="mb-2"></p>')
+      .replace(/\n/g, '<br>');
 
     let actionCardHtml = "";
     const actionId = "action-" + Date.now();
     if (actionCard && actionCard.type === "TRADE") {
-      const side = actionCard.side === "SELL" ? "SELL" : "BUY";
-      const orderType = actionCard.order_type === "LIMIT" ? "LIMIT" : "MARKET";
-      const instrument = escapeHtml(actionCard.instrument || "");
-      const quantity = Number(actionCard.quantity || 0);
-      const notional = Number(actionCard.notional_usdt || 0);
-      const sideBadge = side === "BUY" ? "badge-success" : "badge-danger";
-      const priceDisplay = orderType === "LIMIT" && Number(actionCard.price) > 0 ? `$${Number(actionCard.price).toLocaleString()}` : "Best Market Ask/Bid";
+      const sideBadge = actionCard.side === "BUY" ? "badge-success" : "badge-danger";
+      const priceDisplay = actionCard.order_type === "LIMIT" && actionCard.price ? `$${actionCard.price.toLocaleString()}` : "Best Market Ask/Bid";
 
       actionCardHtml = `
         <div class="copilot-action-card mt-2">
           <div class="action-card-header">
             <div>
-              <span class="badge ${sideBadge} mr-1 font-weight-bold">${side}</span>
-              <span class="badge badge-dark">${orderType}</span>
+              <span class="badge ${sideBadge} mr-1 font-weight-bold">${actionCard.side}</span>
+              <span class="badge badge-dark">${actionCard.order_type}</span>
             </div>
-            <strong class="text-white">${instrument}</strong>
+            <strong class="text-white">${actionCard.instrument}</strong>
           </div>
           <div class="action-param-grid">
-            <div class="action-param">Quantity: <strong>${Number.isFinite(quantity) ? quantity : 0}</strong></div>
+            <div class="action-param">Quantity: <strong>${actionCard.quantity}</strong></div>
             <div class="action-param">Price: <strong>${priceDisplay}</strong></div>
-            <div class="action-param">Total Value: <strong>$${Number.isFinite(notional) ? notional.toLocaleString() : "0"} USDT</strong></div>
+            <div class="action-param">Total Value: <strong>$${actionCard.notional_usdt.toLocaleString()} USDT</strong></div>
             <div class="action-param">Mode: <strong class="text-gold">${state.mode.toUpperCase()}</strong></div>
           </div>
           <button class="btn-confirm-action" id="${actionId}">
@@ -1476,7 +1418,12 @@
     }
 
     function recalcSecondsPotential() {
-      updateSecondsExecutionSemantics();
+      const profitEl = $("sec-potential-profit");
+      if (profitEl) {
+        const stake = parseFloat($("seconds-stake-input")?.value) || 0;
+        const profit = stake * 0.85;
+        profitEl.textContent = `+$${profit.toFixed(2)} USDT`;
+      }
     }
 
     // Refresh advice manually
@@ -1598,9 +1545,8 @@
 
       const takerMetric = $("sec-metric-taker");
       if (takerMetric) {
-        const ratio = Math.max(0, Number(data.taker_ratio) || 0);
-        const buyShare = ratio / (1 + ratio);
-        takerMetric.textContent = `${Math.round(buyShare * 100)}% Buy`;
+        const t = data.taker_ratio || 0.5;
+        takerMetric.textContent = `${Math.round(t * 100)}% Buy`;
       }
 
       const tickMetric = $("sec-metric-tick");
@@ -2041,10 +1987,10 @@
         const res = await fetch("/crypto-com/api/paper/reset", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ amount: 20000.0 }),
+          body: JSON.stringify({ amount: 10000.0 }),
         });
         if (res.ok) {
-          toast("Virtual paper balance reset to $20,000.00 USDT", "success");
+          toast("Virtual paper balance reset to $10,000.00 USDT", "success");
           await refreshPortfolio();
           await refreshSecondsAdvice();
         }
@@ -2054,131 +2000,7 @@
     });
   }
 
-  // ─── AI Studio: Self-Tuning Model Trainer + Strategy Optimizer ───────────
-  function setupScalpAIStudio() {
-    // Helpers to update weight bars
-    function renderScalpWeights(weights) {
-      const keys = ["trend", "momentum", "liquidity", "volatility", "relative_strength"];
-      for (const key of keys) {
-        const pct = Math.round((weights[key] || 0) * 100);
-        const bar = document.getElementById("scalp-wbar-" + key);
-        const val = document.getElementById("scalp-wval-" + key);
-        if (bar) bar.style.width = pct + "%";
-        if (val) val.textContent = pct + "%";
-      }
-    }
-
-    function renderScalpModelStatus(status) {
-      const badge = document.getElementById("scalp-train-status-badge");
-      const samples = document.getElementById("scalp-train-samples");
-      const accuracy = document.getElementById("scalp-train-accuracy");
-      const loss = document.getElementById("scalp-train-loss");
-      if (badge) {
-        badge.textContent = status.is_custom_trained ? "Custom Trained" : "Default Weights";
-        badge.className = status.is_custom_trained
-          ? "badge badge-pill badge-success"
-          : "badge badge-pill badge-dark";
-      }
-      if (samples) samples.textContent = status.sample_count ?? status.resolved_samples ?? 0;
-      if (accuracy) accuracy.textContent = status.directional_accuracy_pct ? status.directional_accuracy_pct + "%" : "\u2014";
-      if (loss) loss.textContent = status.loss !== undefined && status.loss !== null ? status.loss : "\u2014";
-      if (status.active_weights) renderScalpWeights(status.active_weights);
-    }
-
-    function renderScalpOptResult(result) {
-      const params = result.best_params || result;
-      const metrics = result.metrics || result;
-      const bs = document.getElementById("scalp-opt-buy-score");
-      const tp = document.getElementById("scalp-opt-tp");
-      const sl = document.getElementById("scalp-opt-sl");
-      const hold = document.getElementById("scalp-opt-hold");
-      const wr = document.getElementById("scalp-opt-win-rate");
-      const pf = document.getElementById("scalp-opt-profit-factor");
-      const sh = document.getElementById("scalp-opt-sharpe");
-      const dd = document.getElementById("scalp-opt-drawdown");
-      if (bs) bs.textContent = params.min_buy_score ?? "75.0";
-      if (tp) tp.textContent = "+" + (params.take_profit_pct ?? "3.0") + "%";
-      if (sl) sl.textContent = "-" + (params.stop_loss_pct ?? "2.0") + "%";
-      if (hold) hold.textContent = (params.max_holding_hours ?? 24) + "h";
-      if (wr) wr.textContent = metrics.win_rate_pct ? metrics.win_rate_pct + "%" : "\u2014";
-      if (pf) pf.textContent = metrics.profit_factor ?? "\u2014";
-      if (sh) sh.textContent = metrics.sharpe_ratio ?? "\u2014";
-      if (dd) dd.textContent = metrics.max_drawdown_pct ? "-" + metrics.max_drawdown_pct + "%" : "\u2014";
-    }
-
-    // Load model status on tab activation and initial load
-    async function loadScalpModelStatus() {
-      try {
-        const status = await request(URLS.scalpModelStatus);
-        renderScalpModelStatus(status);
-      } catch (e) {
-        // Non-fatal: silently skip if server not yet ready
-      }
-    }
-
-    // Run Training button
-    const btnTrain = document.getElementById("btn-scalp-train-model");
-    if (btnTrain) {
-      btnTrain.addEventListener("click", async () => {
-        btnTrain.disabled = true;
-        btnTrain.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Training\u2026';
-        try {
-          const result = await request(URLS.scalpTrain, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ bootstrap: true }),
-          });
-          toast(
-            `\uD83E\uDDE0 Model trained! Directional accuracy: ${result.directional_accuracy_pct ?? 0}%  ·  Samples: ${result.sample_count ?? 0}${result.is_bootstrapped ? " (bootstrap)" : ""}`,
-            "success"
-          );
-          renderScalpModelStatus(result);
-          if (result.weights) renderScalpWeights(result.weights);
-        } catch (err) {
-          toast(err.message || "Training failed", "error");
-        } finally {
-          btnTrain.disabled = false;
-          btnTrain.innerHTML = '<i class="fas fa-play mr-1"></i> Run Training';
-        }
-      });
-    }
-
-    // Optimize Parameters button
-    const btnOpt = document.getElementById("btn-scalp-optimize-params");
-    if (btnOpt) {
-      btnOpt.addEventListener("click", async () => {
-        btnOpt.disabled = true;
-        btnOpt.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Optimizing\u2026';
-        try {
-          const result = await request(URLS.scalpOptimize, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ instrument: state.secondsPair || "BTC_USDT" }),
-          });
-          const combos = result.total_tested_combinations || 0;
-          const wr = result.metrics?.win_rate_pct || result.win_rate_pct || 0;
-          toast(`\u2699\uFE0F Optimized across ${combos} parameter sets. Win Rate: ${wr}%`, "success");
-          renderScalpOptResult(result);
-        } catch (err) {
-          toast(err.message || "Optimization failed", "error");
-        } finally {
-          btnOpt.disabled = false;
-          btnOpt.innerHTML = '<i class="fas fa-crosshairs mr-1"></i> Optimize Parameters';
-        }
-      });
-    }
-
-    // Auto-load status when the seconds tab becomes visible
-    document.querySelectorAll(".tab-link[data-tab='seconds']").forEach((tabBtn) => {
-      tabBtn.addEventListener("click", () => setTimeout(loadScalpModelStatus, 200));
-    });
-
-    // Also load once on init
-    loadScalpModelStatus();
-  }
-
   document.addEventListener("DOMContentLoaded", init);
-
   if (document.readyState === "complete" || document.readyState === "interactive") {
     init();
   }

@@ -291,12 +291,16 @@ class CryptoComTraderPlugin(AbstractWebInterfacePlugin):
             body = flask.request.get_json(silent=True) or {}
             prompt = str(body.get("prompt", "")).strip()
             instrument = str(body.get("instrument", "BTC_USDT")).upper()
+            conversation_history = body.get("conversation_history", [])
             if not prompt:
                 return flask.jsonify({"error": "Prompt cannot be empty"}), 400
+            if not isinstance(conversation_history, list):
+                return flask.jsonify({"error": "conversation_history must be a list"}), 400
             try:
                 res = self.ai_engine.process_copilot_message(
                     prompt=prompt,
                     active_instrument=instrument,
+                    conversation_history=conversation_history,
                 )
                 return flask.jsonify(res)
             except Exception as error:
@@ -435,5 +439,34 @@ class CryptoComTraderPlugin(AbstractWebInterfacePlugin):
                     instrument=instrument,
                 )
                 return flask.jsonify({"status": "ok", "autopilot": res})
+            except Exception as error:
+                return flask.jsonify({"error": str(error)}), 500
+
+        # --- AI Self-Tuning Model Training (Seconds Scalper) ---
+        @self.blueprint.route("/api/seconds/train", methods=["POST"])
+        @login.login_required_when_activated
+        def seconds_train():
+            body = flask.request.get_json(silent=True) or {}
+            bootstrap = bool(body.get("bootstrap", True))
+            try:
+                return flask.jsonify(self.service.train_scalp_model(bootstrap_if_empty=bootstrap))
+            except Exception as error:
+                return flask.jsonify({"error": str(error)}), 500
+
+        @self.blueprint.route("/api/seconds/model-status", methods=["GET"])
+        @login.login_required_when_activated
+        def seconds_model_status():
+            try:
+                return flask.jsonify(self.service.get_scalp_model_status())
+            except Exception as error:
+                return flask.jsonify({"error": str(error)}), 500
+
+        @self.blueprint.route("/api/seconds/optimize", methods=["POST"])
+        @login.login_required_when_activated
+        def seconds_optimize():
+            body = flask.request.get_json(silent=True) or {}
+            instrument = str(body.get("instrument", "BTC_USDT")).upper()
+            try:
+                return flask.jsonify(self.service.optimize_scalp_strategy(instrument=instrument))
             except Exception as error:
                 return flask.jsonify({"error": str(error)}), 500

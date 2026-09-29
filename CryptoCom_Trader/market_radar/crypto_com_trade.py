@@ -272,7 +272,7 @@ class CryptoComExchangeClient:
 class PaperTradingEngine:
     """Simulates spot trading ledger and order execution without risking real funds."""
 
-    def __init__(self, storage_dir: Optional[Path] = None, initial_usdt: float = 20000.0):
+    def __init__(self, storage_dir: Optional[Path] = None, initial_usdt: float = 10000.0):
         self.storage_dir = storage_dir or Path(os.getenv("MARKET_RADAR_DATA_DIR", "user/crypto_com_trader"))
         self.file_path = self.storage_dir / "paper_ledger.json"
         self._lock = threading.Lock()
@@ -313,7 +313,7 @@ class PaperTradingEngine:
         except Exception as e:
             logger.error("Failed to save paper trading ledger: %s", e)
 
-    def reset_balances(self, usdt_amount: float = 20000.0) -> Dict[str, float]:
+    def reset_balances(self, usdt_amount: float = 10000.0) -> Dict[str, float]:
         with self._lock:
             self.balances = {"USDT": float(usdt_amount)}
             self.open_orders = []
@@ -904,8 +904,6 @@ class SecondsScalpManager:
 
             now = time.time()
             trade_id = f"sec_{int(now * 1000)}"
-            position_quantity = round(stake / entry_price, 8)
-            entry_order = None
 
             # Balance verification & deduction
             if not is_live:
@@ -917,19 +915,16 @@ class SecondsScalpManager:
             else:
                 if not self.client.has_credentials:
                     raise ValueError("Live trading requires configured Crypto.com API credentials")
-                if direction_clean != "CALL":
-                    raise ValueError(
-                        "Live seconds trading supports long-only spot positions; PUT is paper-only"
-                    )
                 try:
-                    entry_order = self.client.create_order(
+                    qty = round(stake / entry_price, 6)
+                    self.client.create_order(
                         instrument=instrument,
-                        side="BUY",
+                        side="BUY" if direction_clean == "CALL" else "SELL",
                         order_type="MARKET",
-                        quantity=position_quantity,
+                        quantity=qty,
                     )
                 except Exception as e:
-                    raise RuntimeError(f"Live entry order was not accepted: {e}") from e
+                    logger.warning("Live order execution note for seconds trade: %s", e)
 
             trade = {
                 "trade_id": trade_id,
@@ -945,9 +940,6 @@ class SecondsScalpManager:
                 "status": "ACTIVE",
                 "payout_ratio": payout_ratio,
                 "leverage": leverage,
-                "execution_model": "spot_long" if is_live else "paper_fixed_payout",
-                "position_quantity": position_quantity,
-                "entry_order": entry_order,
                 "ai_engine": ai_engine,
                 "pnl_usdt": 0.0,
                 "pnl_pct": 0.0,
@@ -955,9 +947,6 @@ class SecondsScalpManager:
                 "exit_price": None,
                 "closed_at": None,
                 "reason": None,
-                "close_attempts": 0,
-                "last_close_attempt_at": 0.0,
-                "close_error": None,
             }
             self.active_trades.append(trade)
             self._save()
@@ -969,7 +958,7 @@ class SecondsScalpManager:
             if idx is None:
                 raise ValueError(f"Trade {trade_id} not found or already settled")
 
-            trade = self.active_trades[idx]
+            trade = self.active_trades.pop(idx)
             instrument = trade["instrument"]
             direction = trade["direction"]
             stake = trade["stake_usdt"]
@@ -977,11 +966,7 @@ class SecondsScalpManager:
             payout_ratio = trade.get("payout_ratio", 0.85)
             leverage = trade.get("leverage", 10.0)
 
-            exit_px = self._get_current_price(
-                instrument,
-                side="SELL" if trade.get("is_live", False) else "BUY",
-                use_mid=not trade.get("is_live", False),
-            )
+            exit_px = self._get_current_price(instrument, use_mid=True)
             if exit_px <= 0:
                 exit_px = trade.get("current_price") or entry_px
 
@@ -991,28 +976,7 @@ class SecondsScalpManager:
                 delta_pct = ((entry_px - exit_px) / entry_px) * 100.0
 
             now = time.time()
-            exit_order = None
-            estimated_fees = 0.0
-            if trade.get("is_live", False):
-                quantity = float(trade.get("position_quantity") or (stake / entry_px))
-                trade["close_attempts"] = int(trade.get("close_attempts", 0)) + 1
-                trade["last_close_attempt_at"] = now
-                try:
-                    exit_order = self.client.create_order(
-                        instrument=instrument,
-                        side="SELL",
-                        order_type="MARKET",
-                        quantity=quantity,
-                    )
-                except Exception as e:
-                    trade["close_error"] = str(e)[:300]
-                    self._save()
-                    raise RuntimeError(f"Live exit order was not accepted: {e}") from e
-                estimated_fees = round(quantity * (entry_px + exit_px) * 0.00075, 4)
-                pnl_usdt = round(quantity * (exit_px - entry_px) - estimated_fees, 2)
-                status = "CASHED_OUT" if early_exit else ("WIN" if pnl_usdt > 0 else "LOSS" if pnl_usdt < 0 else "TIE")
-                reason = "EARLY_EXIT" if early_exit else "EXPIRED"
-            elif early_exit:
+            if early_exit:
                 if delta_pct > 0:
                     secured_ratio = 0.65
                     pnl_usdt = round(stake * payout_ratio * secured_ratio, 2)
@@ -1041,6 +1005,17 @@ class SecondsScalpManager:
                 credit = max(0.0, stake + pnl_usdt)
                 self.paper.balances["USDT"] = round(self.paper.balances.get("USDT", 0.0) + credit, 4)
                 self.paper._save()
+            else:
+                try:
+                    qty = round(stake / exit_px, 6)
+                    self.client.create_order(
+                        instrument=instrument,
+                        side="SELL" if direction == "CALL" else "BUY",
+                        order_type="MARKET",
+                        quantity=qty,
+                    )
+                except Exception as e:
+                    logger.warning("Live counter-order error: %s", e)
 
             trade.update({
                 "status": status,
@@ -1049,13 +1024,8 @@ class SecondsScalpManager:
                 "pnl_pct": pnl_pct,
                 "closed_at": int(now),
                 "reason": reason,
-                "exit_order": exit_order,
-                "estimated_fees_usdt": estimated_fees,
-                "pnl_estimated": bool(trade.get("is_live", False)),
-                "close_error": None,
                 "remaining_seconds": 0,
             })
-            self.active_trades.pop(idx)
             self.history.insert(0, trade)
             if len(self.history) > 200:
                 self.history = self.history[:200]
@@ -1069,8 +1039,7 @@ class SecondsScalpManager:
                 to_close = []
                 with self._lock:
                     for trade in self.active_trades:
-                        retry_ready = now - float(trade.get("last_close_attempt_at", 0.0)) >= 5.0
-                        if now >= trade["expiry_time"] and retry_ready:
+                        if now >= trade["expiry_time"]:
                             to_close.append(trade["trade_id"])
                 for tid in to_close:
                     try:
@@ -1104,13 +1073,7 @@ class SecondsScalpManager:
                 else:
                     delta_pct = ((entry_px - cur_px) / entry_px) * 100.0
 
-                if copy_t.get("is_live", False):
-                    quantity = float(copy_t.get("position_quantity") or (stake / entry_px))
-                    estimated_fees = quantity * (entry_px + cur_px) * 0.00075
-                    floating_pnl = round(quantity * (cur_px - entry_px) - estimated_fees, 2)
-                    floating_pct = round((floating_pnl / stake) * 100.0, 2) if stake else 0.0
-                    cashout_val = max(0.0, round(stake + floating_pnl, 2))
-                elif delta_pct > 0:
+                if delta_pct > 0:
                     floating_pnl = round(stake * payout_ratio, 2)
                     floating_pct = round(payout_ratio * 100.0, 1)
                     cashout_val = round(stake + (floating_pnl * 0.65), 2)
@@ -1264,128 +1227,12 @@ class CryptoComTraderService:
         self.seconds_mgr = SecondsScalpManager(self.client, self.paper)
         self.mode = "paper"  # 'paper' or 'live'
         self._lock = threading.Lock()
-        # AI training infrastructure shared with Market Radar
-        from market_radar.trainer import RadarTrainer
-        from market_radar.optimizer import RadarOptimizer
-        _scalp_data_dir = self.seconds_mgr.storage_dir
-        self.scalp_trainer = RadarTrainer(data_dir=_scalp_data_dir)
-        self.scalp_optimizer = RadarOptimizer(data_dir=_scalp_data_dir)
 
     def toggle_seconds_autopilot(self, **kwargs) -> Dict[str, Any]:
         return self.seconds_mgr.toggle_autopilot(**kwargs)
 
     def get_seconds_autopilot_status(self) -> Dict[str, Any]:
         return self.seconds_mgr.get_autopilot_status()
-
-    # ------------------------------------------------------------------
-    # AI Self-Tuning Model Training (Seconds Scalper)
-    # ------------------------------------------------------------------
-
-    def _build_scalp_trainer_dataset(self) -> None:
-        """Writes settled scalp history into the trainer's prediction_events.jsonl format."""
-        import json as _json
-        from pathlib import Path as _Path
-
-        events_path = self.scalp_trainer.events_path
-        with self.seconds_mgr._lock:
-            history = list(self.seconds_mgr.history)
-
-        # Only include fully settled trades with a known outcome
-        settled = [
-            t for t in history
-            if t.get("status") in ("WIN", "LOSS", "CASHED_OUT", "EXPIRED")
-            and t.get("entry_price") and t.get("exit_price")
-        ]
-        if not settled:
-            return
-
-        # Build a set of signal_ids already written to avoid duplicates
-        existing_ids: set[str] = set()
-        if events_path.exists():
-            try:
-                with open(events_path, "r", encoding="utf-8") as f:
-                    for line in f:
-                        line = line.strip()
-                        if not line:
-                            continue
-                        try:
-                            ev = _json.loads(line)
-                            if ev.get("signal_id"):
-                                existing_ids.add(ev["signal_id"])
-                        except (ValueError, KeyError):
-                            pass
-            except OSError:
-                pass
-
-        events_path.parent.mkdir(parents=True, exist_ok=True)
-        with open(events_path, "a", encoding="utf-8") as f:
-            for trade in settled:
-                trade_id = trade.get("trade_id", "")
-                if trade_id in existing_ids:
-                    continue
-
-                entry_px = float(trade.get("entry_price", 1.0))
-                exit_px = float(trade.get("exit_price", entry_px))
-                direction = trade.get("direction", "CALL")
-                pnl_pct = float(trade.get("pnl_pct", 0.0))
-                duration = int(trade.get("duration_seconds", 30))
-                stake = float(trade.get("stake_usdt", 10.0))
-
-                # Derive proxy component scores from trade metadata
-                price_delta_pct = (exit_px - entry_px) / entry_px * 100.0
-                trend_score = max(10.0, min(90.0, 50.0 + price_delta_pct * 15.0))
-                # Short durations are high-momentum setups
-                momentum_score = max(10.0, min(90.0, 80.0 - (duration / 30.0) * 10.0))
-                # Larger stakes imply trader confidence
-                liquidity_score = max(20.0, min(85.0, 40.0 + min(stake / 5.0, 40.0)))
-                # PUT trades have inverse relationship
-                if direction == "PUT":
-                    trend_score = 100.0 - trend_score
-                volatility_score = max(20.0, min(80.0, 50.0 + abs(price_delta_pct) * 10.0))
-                rel_strength_score = max(20.0, min(80.0, 50.0 + pnl_pct * 5.0))
-
-                # Write prediction event
-                pred_event = {
-                    "type": "prediction",
-                    "signal_id": trade_id,
-                    "recorded_at": int(trade.get("start_time", time.time())),
-                    "components": {
-                        "trend": round(trend_score, 2),
-                        "momentum": round(momentum_score, 2),
-                        "liquidity": round(liquidity_score, 2),
-                        "volatility": round(volatility_score, 2),
-                        "relative_strength": round(rel_strength_score, 2),
-                    },
-                    "risk_penalty": 0.0,
-                }
-                # Write outcome event
-                outcome_event = {
-                    "type": "outcome",
-                    "signal_id": trade_id,
-                    "recorded_at": int(trade.get("closed_at") or time.time()),
-                    "realized_return_pct": round(pnl_pct, 4),
-                    "horizon_hours": round(duration / 3600.0, 4),
-                }
-                f.write(_json.dumps(pred_event) + "\n")
-                f.write(_json.dumps(outcome_event) + "\n")
-                existing_ids.add(trade_id)
-
-    def train_scalp_model(self, bootstrap_if_empty: bool = True) -> Dict[str, Any]:
-        """Trains the scalper AI model weights against settled scalp outcomes."""
-        self._build_scalp_trainer_dataset()
-        return self.scalp_trainer.train(bootstrap_if_empty=bootstrap_if_empty)
-
-    def get_scalp_model_status(self) -> Dict[str, Any]:
-        """Returns the current scalp AI model status and weight metrics."""
-        return self.scalp_trainer.get_status()
-
-    def optimize_scalp_strategy(self, instrument: str = "BTC_USDT") -> Dict[str, Any]:
-        """Walk-forward optimize scalp strategy parameters using candle history."""
-        try:
-            candles_1h = self.client.get_candlestick(instrument, "1h", 150)
-        except Exception:
-            candles_1h = []
-        return self.scalp_optimizer.optimize(candles_1h)
 
     def set_mode(self, mode: str) -> str:
         with self._lock:
@@ -1397,7 +1244,7 @@ class CryptoComTraderService:
             self.mode = mode
             return self.mode
 
-    def reset_paper(self, usdt_amount: float = 20000.0) -> Dict[str, Any]:
+    def reset_paper(self, usdt_amount: float = 10000.0) -> Dict[str, Any]:
         res = self.paper.reset_balances(usdt_amount)
         if hasattr(self, "seconds_mgr") and self.seconds_mgr:
             with self.seconds_mgr._lock:

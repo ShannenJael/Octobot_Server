@@ -25,21 +25,7 @@ class CryptoComAIEngine:
 
     def __init__(self, trade_service: Any = None):
         self.trade_service = trade_service
-
-    @staticmethod
-    def _normalize_conversation_history(
-        conversation_history: Optional[List[Dict[str, str]]],
-    ) -> List[Dict[str, str]]:
-        """Keep a small, role-safe context window supplied by the current browser session."""
-        normalized: List[Dict[str, str]] = []
-        for message in (conversation_history or [])[-10:]:
-            if not isinstance(message, dict):
-                continue
-            role = str(message.get("role", "")).lower()
-            content = str(message.get("content", "")).strip()
-            if role in ("user", "assistant") and content:
-                normalized.append({"role": role, "content": content[:4000]})
-        return normalized
+        self.history: List[Dict[str, str]] = []
 
     def _ensure_env_loaded(self) -> None:
         """Load .env file if key environment variables are missing."""
@@ -85,13 +71,12 @@ class CryptoComAIEngine:
         """Process user natural language message and return conversational response + action cards."""
         self._ensure_env_loaded()
         market_context = self._get_market_context(active_instrument)
-        history = self._normalize_conversation_history(conversation_history)
 
         # 1. Try Antigravity / Gemini first
         gemini_key = os.getenv("ANTIGRAVITY_API_KEY") or os.getenv("GEMINI_API_KEY")
         if gemini_key and not gemini_key.startswith("AQ.placeholder"):
             try:
-                return self._call_gemini_copilot(prompt, market_context, active_instrument, gemini_key, "https://generativelanguage.googleapis.com/v1beta", history)
+                return self._call_gemini_copilot(prompt, market_context, active_instrument, gemini_key, "https://generativelanguage.googleapis.com/v1beta")
             except Exception as e:
                 logger.warning("Antigravity API call failed (%s), attempting secondary provider...", e)
 
@@ -100,7 +85,7 @@ class CryptoComAIEngine:
         openai_base = os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1").rstrip("/")
         if openai_key and not openai_key.startswith("sk-proj-placeholder"):
             try:
-                return self._call_openai_copilot(prompt, market_context, active_instrument, openai_key, openai_base, history)
+                return self._call_openai_copilot(prompt, market_context, active_instrument, openai_key, openai_base)
             except Exception as e:
                 logger.warning("OpenAI / Codex API call failed (%s), falling back to quantitative assistant...", e)
 
@@ -114,7 +99,6 @@ class CryptoComAIEngine:
         active_pair: str,
         api_key: str,
         base_url: str,
-        conversation_history: Optional[List[Dict[str, str]]] = None,
     ) -> Dict[str, Any]:
         """Send prompt to OpenAI / Codex API."""
         model = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
@@ -141,7 +125,6 @@ class CryptoComAIEngine:
             "model": model,
             "messages": [
                 {"role": "system", "content": system_prompt},
-                *self._normalize_conversation_history(conversation_history),
                 {"role": "user", "content": prompt},
             ],
             "response_format": {"type": "json_object"},
@@ -172,7 +155,6 @@ class CryptoComAIEngine:
         active_pair: str,
         api_key: str,
         base_url: str,
-        conversation_history: Optional[List[Dict[str, str]]] = None,
     ) -> Dict[str, Any]:
         """Send prompt to Google Antigravity / Gemini API."""
         system_instruction = (
@@ -186,16 +168,10 @@ class CryptoComAIEngine:
             "3. Output MUST be valid JSON with 'reply' (string) and optional 'action_card' (dict or null)."
         )
 
-        contents = []
-        for message in self._normalize_conversation_history(conversation_history):
-            contents.append({
-                "role": "model" if message["role"] == "assistant" else "user",
-                "parts": [{"text": message["content"]}],
-            })
-        contents.append({"role": "user", "parts": [{"text": prompt}]})
         payload = {
-            "systemInstruction": {"parts": [{"text": system_instruction}]},
-            "contents": contents,
+            "contents": [
+                {"parts": [{"text": f"System Instruction:\n{system_instruction}\n\nUser Request:\n{prompt}"}]}
+            ],
             "generationConfig": {"responseMimeType": "application/json"},
         }
 
@@ -486,7 +462,7 @@ class CryptoComAIEngine:
             "low_24h": 80000.0,
             "depth_bid_ask_ratio": 1.15,
             "rsi_14": 54.0,
-            "balances": {"USDT": 20000.0, "BTC": 0.0},
+            "balances": {"USDT": 10000.0, "BTC": 0.0},
             "mode": "paper",
         }
 
@@ -590,7 +566,7 @@ class CryptoComAIEngine:
                 "- Do NOT bias toward CALL. If micro-momentum is negative or asks dominate, predict PUT.\n"
                 "- If indicators conflict or market is in flat chop, output probability 48-60.\n"
                 "- Only output probability >= 70 when orderbook skew and micro-momentum firmly align.\n"
-                "Output JSON with keys: 'direction' ('CALL' or 'PUT'), 'probability' (an uncalibrated signal-confidence integer 45-88), "
+                "Output JSON with keys: 'direction' ('CALL' or 'PUT'), 'probability' (integer 45-88), "
                 "'duration' (30 or 60), and 'rationale' (1 concise sentence)."
             )
             payload = {
@@ -616,7 +592,7 @@ class CryptoComAIEngine:
                 return {
                     "instrument": instrument,
                     "direction": str(parsed.get("direction", "CALL")).upper(),
-                    "probability": max(45, min(88, int(parsed.get("probability", 50)))),
+                    "probability": int(parsed.get("probability", 70)),
                     "duration": int(parsed.get("duration", 30)),
                     "last_price": last_price,
                     "depth_ratio": depth_ratio,
@@ -649,7 +625,7 @@ class CryptoComAIEngine:
         system_prompt = (
             "You are an unbiased ultra-high-frequency quantitative scalping AI predicting 30s-60s micro-trends on Crypto.com. "
             "You MUST treat CALL and PUT with equal objective weight based purely on the data. "
-            "Respond strictly in JSON format with keys: 'direction' ('CALL' or 'PUT'), 'probability' (an uncalibrated signal-confidence integer 45-88), "
+            "Respond strictly in JSON format with keys: 'direction' ('CALL' or 'PUT'), 'probability' (integer 45-88), "
             "'duration' (integer 30 or 60), and 'rationale' (concise 1-sentence explanation)."
         )
         user_prompt = (
@@ -659,8 +635,8 @@ class CryptoComAIEngine:
             f"Recent Taker Volume Flow: {taker_ratio:.2f}x buy-to-sell ratio\n"
             f"Recent Micro-Tick Trajectory (last 25 trades): {micro_delta:+.2f} USDT ({micro_pct:+.3f}%)\n\n"
             "RULES:\n"
-            f"1. If micro-momentum is negative ({micro_delta:+.2f} < 0) or ask depth dominates (< 0.95x), PREDICT PUT.\n"
-            f"2. If micro-momentum is positive ({micro_delta:+.2f} > 0) and bid depth dominates (> 1.05x), PREDICT CALL.\n"
+            "1. If micro-momentum is negative ({micro_delta:+.2f} < 0) or ask depth dominates (< 0.95x), PREDICT PUT.\n"
+            "2. If micro-momentum is positive ({micro_delta:+.2f} > 0) and bid depth dominates (> 1.05x), PREDICT CALL.\n"
             "3. If signals conflict (e.g. positive ticks but heavy asks) or the market is flat/choppy, keep probability low (50-60%) so the auto-pilot avoids entering low-conviction chop.\n"
             "Predict micro-trend direction for the next 30-60 seconds."
         )
@@ -691,7 +667,7 @@ class CryptoComAIEngine:
                 return {
                     "instrument": instrument,
                     "direction": str(parsed.get("direction", "CALL")).upper(),
-                    "probability": max(45, min(88, int(parsed.get("probability", 50)))),
+                    "probability": int(parsed.get("probability", 70)),
                     "duration": int(parsed.get("duration", 30)),
                     "last_price": last_price,
                     "depth_ratio": depth_ratio,
@@ -756,7 +732,7 @@ class CryptoComAIEngine:
             if anti and codex:
                 is_agreed = anti["direction"] == codex["direction"]
                 if is_agreed:
-                    combined_prob = round((anti["probability"] + codex["probability"]) / 2)
+                    combined_prob = min(92, round((anti["probability"] + codex["probability"]) / 2 + 4))
                     return {
                         "instrument": instrument,
                         "direction": anti["direction"],

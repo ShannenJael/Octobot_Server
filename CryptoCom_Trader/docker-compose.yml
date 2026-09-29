@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  crypto-com-trader:
+    build: .
+    container_name: cryptocom-trader-app
+    restart: unless-stopped
+    ports:
+      - "5050:5050"
+    env_file:
+      - .env
+    volumes:
+      - ./data:/app/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5050/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
