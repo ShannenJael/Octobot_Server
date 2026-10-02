@@ -259,6 +259,21 @@ class TestSecondsScalpManager(unittest.TestCase):
         self.assertIsNotNone(settled["exit_order"])
         self.assertEqual(self.manager.active_trades, [])
 
+    def test_live_mode_provider_controls_autopilot_execution_mode(self):
+        live_mode = False
+        manager = SecondsScalpManager(
+            self.client,
+            self.paper,
+            storage_dir=Path(self.temp_dir) / "provider-seconds",
+            live_mode_provider=lambda: live_mode,
+        )
+        try:
+            self.assertFalse(manager.is_live_mode())
+            live_mode = True
+            self.assertTrue(manager.is_live_mode())
+        finally:
+            manager.running = False
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -297,6 +297,15 @@
 
   $("btn-toggle-mode")?.addEventListener("click", async () => {
     const newMode = state.mode === "paper" ? "live" : "paper";
+    if (newMode === "live") {
+      const automationWarning = state.autopilotEnabled
+        ? `\n\nWARNING: Seconds Auto-Pilot is enabled and will place REAL orders using its configured stake after this switch.`
+        : "";
+      const confirmed = window.confirm(
+        `Switch to LIVE trading? Orders will use real funds on Crypto.com.${automationWarning}`
+      );
+      if (!confirmed) return;
+    }
     try {
       const res = await fetch(URLS.mode, {
         method: "POST",

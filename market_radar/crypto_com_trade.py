@@ -13,7 +13,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 logger = logging.getLogger("CryptoComTrade")
 
@@ -802,11 +802,13 @@ class SecondsScalpManager:
         client: CryptoComExchangeClient,
         paper: PaperTradingEngine,
         storage_dir: Optional[Path] = None,
+        live_mode_provider: Optional[Callable[[], bool]] = None,
     ):
         self.client = client
         self.paper = paper
         self.storage_dir = storage_dir or Path(os.getenv("MARKET_RADAR_DATA_DIR", "user/crypto_com_trader"))
         self.file_path = self.storage_dir / "seconds_scalp_ledger.json"
+        self._live_mode_provider = live_mode_provider or (lambda: False)
         self._lock = threading.Lock()
         self.active_trades: List[Dict[str, Any]] = []
         self.history: List[Dict[str, Any]] = []
@@ -827,6 +829,10 @@ class SecondsScalpManager:
         self.worker_thread.start()
         self.autopilot_thread = threading.Thread(target=self._autopilot_loop, daemon=True)
         self.autopilot_thread.start()
+
+    def is_live_mode(self) -> bool:
+        """Return the service execution mode without coupling this manager to the singleton."""
+        return bool(self._live_mode_provider())
 
     def _load(self) -> None:
         try:
@@ -1228,7 +1234,7 @@ class SecondsScalpManager:
                             direction=direction,
                             stake_usdt=stake,
                             duration_seconds=dur,
-                            is_live=False,  # default paper safety
+                            is_live=self.is_live_mode(),
                             ai_engine=engine_label,
                         )
                         with self._lock:
@@ -1261,8 +1267,12 @@ class CryptoComTraderService:
         self.client = CryptoComExchangeClient()
         self.paper = PaperTradingEngine()
         self.strategy_mgr = TradingStrategyManager(self.client, self.paper)
-        self.seconds_mgr = SecondsScalpManager(self.client, self.paper)
         self.mode = "paper"  # 'paper' or 'live'
+        self.seconds_mgr = SecondsScalpManager(
+            self.client,
+            self.paper,
+            live_mode_provider=lambda: self.mode == "live",
+        )
         self._lock = threading.Lock()
         # AI training infrastructure shared with Market Radar
         from market_radar.trainer import RadarTrainer
