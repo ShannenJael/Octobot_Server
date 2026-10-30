@@ -1092,7 +1092,7 @@ def get_all_symbols_list():
                 if request_response else {request_response}
             _get_logger().exception(e, True, f"{base_error}{str_error}")
             _get_logger().debug(f"coingecko.com response {details}")
-            return {}
+            return []
     return all_currencies
 
 

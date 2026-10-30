@@ -1,4 +1,4 @@
-ARG OCTOBOT_IMAGE=drakkarsoftware/octobot:stable
+ARG OCTOBOT_IMAGE=drakkarsoftware/octobot:3.0.0-beta2
 FROM ${OCTOBOT_IMAGE}
 
 ENV WEB_PORT=5001

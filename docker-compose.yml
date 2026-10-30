@@ -4,7 +4,7 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
-        OCTOBOT_IMAGE: ${OCTOBOT_IMAGE:-drakkarsoftware/octobot:stable}
+        OCTOBOT_IMAGE: ${OCTOBOT_BASE_IMAGE:-drakkarsoftware/octobot:3.0.0-beta2}
     image: octobot-local:latest
     container_name: octobot-local
     environment:

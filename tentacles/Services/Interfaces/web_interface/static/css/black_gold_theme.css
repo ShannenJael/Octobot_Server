@@ -162,6 +162,29 @@ a:hover {
     border-bottom: 2px solid transparent;
 }
 
+/* Keep the expanded navbar inside the viewport: wrap items instead of overflowing */
+@media (min-width: 992px) {
+    #main-nav-bar .navbar-nav {
+        flex-wrap: wrap;
+    }
+
+    #main-nav-bar #main-nav-right-part {
+        justify-content: flex-end;
+    }
+}
+
+@media (min-width: 992px) and (max-width: 1599.98px) {
+    #main-nav-bar .navbar-nav .nav-item {
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+    }
+
+    #main-nav-bar .navbar-nav .nav-link {
+        padding: 6px 8px !important;
+        font-size: 13px;
+    }
+}
+
 .navbar-nav .nav-link:hover {
     color: var(--gold-light) !important;
     background: rgba(212, 175, 55, 0.08);

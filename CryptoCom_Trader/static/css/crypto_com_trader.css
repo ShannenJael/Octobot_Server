@@ -248,9 +248,14 @@
   gap: 0.5rem;
   border-bottom: 1px solid var(--trader-border-subtle);
   padding-bottom: 0.5rem;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
 }
 
 .tab-link {
+  flex: 0 0 auto;
   background: transparent;
   border: 1px solid transparent;
   color: var(--text-muted);
@@ -259,6 +264,7 @@
   padding: 8px 18px;
   border-radius: 8px;
   cursor: pointer;
+  white-space: nowrap;
   transition: all 0.2s;
 }
 

@@ -530,5 +530,5 @@ def seconds_autopilot_toggle():
         return flask.jsonify({"error": str(error)}), 500
 
 if __name__ == "__main__":
-    print(f"🚀 Starting Crypto.com Standalone Trader on http://{Config.HOST}:{Config.PORT}")
+    print(f"Starting Crypto.com Standalone Trader on http://{Config.HOST}:{Config.PORT}")
     app.run(host=Config.HOST, port=Config.PORT, debug=Config.DEBUG)
